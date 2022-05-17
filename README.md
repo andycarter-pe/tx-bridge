@@ -1,8 +1,8 @@
 # TX-BRIDGE <img src="https://github.com/andycarter-pe/tx-bridge/blob/dev/doc/Logo_CWE_TxDOT.png" align="right" alt="tx-bridge agency" height="80"> <br> <br>
 ## <i>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx </i>
 
-<img src="https://github.com/NOAA-OWP/ras2fim/blob/main/doc/ras2fim_logo_20211018.png" align="right"
-     alt="ras2fim logo" width="160" height="160">
+<img src="https://github.com/andycarter-pe/tx-bridge/blob/dev/doc/tx-bridge-logo-20220517.png" align="right"
+     alt="tx-bridge logo" width="160" height="160">
 
 **Description**:  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
 
