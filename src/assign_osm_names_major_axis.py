@@ -8,6 +8,8 @@
 # tx-bridge - 07 - seventh processing script
 # Uses the 'pdal' conda environment
 
+# TODO - 2022.06.17 -  SettingWithCopyWarning Warning override
+
 # ************************************************************
 import argparse
 import geopandas as gpd

@@ -88,6 +88,9 @@ def fn_extract_deck_profile(str_mjr_axis_shp_path,
     print("  ---[v]   Optional: DATA IN FEET: " + str(b_is_feet) )
     print("===================================================================")
     
+    # option to turn off the SettingWithCopyWarning
+    pd.set_option('mode.chained_assignment', None)
+    
     # create the output directory if it does not exist
     os.makedirs(str_output_dir, exist_ok=True)
     
@@ -263,30 +266,32 @@ def fn_extract_deck_profile(str_mjr_axis_shp_path,
         # keep only the records that don't have null values
         gdf_other = gdf[~gdf.isna().any(1)]
         
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # ~~~~~~~~~~~~~~~~~~~~~
+        # run a savgol filter on the road deck
+        # cwe_TxDOT_bridge_noise_filter_20220523.ipynb
+        # ~~~~~~~~~~~~~~~~~~~~~
+        
+        
         # ### Simplify the line of the road section ###
         # create a Linestring from the (station, elevation) line
         ar_coordinates = gdf_other[['h_distance', 'elev_deck']].to_numpy()
         line = LineString(ar_coordinates)
         
-        # using shapely - simplify the line to 0.1 feet
-        # TODO - Better Filter for noise - 2022.05.19
-        # https://stackoverflow.com/questions/37598986/reducing-noise-on-data
-        
-        tolerance = 0.2
+        # using shapely - simplify the line to 0.05 feet
+
+        tolerance = 0.05
         simplified_line = line.simplify(tolerance, preserve_topology=False)
         
         list_simple_line = list(zip(*simplified_line.coords.xy))
         list_simple_deck_sta = [item[0] for item in list_simple_line]
         list_simple_deck_elev = [item[1] for item in list_simple_line]
         
-        # TODO - Convert to plotting function - 2022.05.19
         # ---------------------------
         # plot the station - elevation data
 
         fig = plt.figure()
         fig.patch.set_facecolor('gainsboro')
-        fig.suptitle(gdf_mjr_axis_ln_lambert['name'][index] + ' @ ' + gdf_mjr_axis_ln_lambert['nhd_name'][index], fontsize=14, fontweight='bold')
+        #fig.suptitle(gdf_mjr_axis_ln_lambert['name'][index] + ' @ ' + gdf_mjr_axis_ln_lambert['nhd_name'][index], fontsize=14, fontweight='bold')
         #fig.suptitle(gdf_mjr_axis_ln_lambert['nhd_name'][index], fontsize=14, fontweight='bold')
         
         ax = plt.gca()
@@ -300,11 +305,13 @@ def fn_extract_deck_profile(str_mjr_axis_shp_path,
                 fontsize=6,
                 style='italic')
         
+        '''
         ax.text(0.98, 0.09, 'Reach Code:' + str(gdf_mjr_axis_ln_lambert['reachcode'][index]),
                 verticalalignment='bottom',
                 horizontalalignment='right',
                 backgroundcolor='w',
                 transform=ax.transAxes, fontsize=6, style='italic')
+        '''
         
         ax.text(0.98, 0.14, 'University of Texas',
                 verticalalignment='bottom',
@@ -334,6 +341,16 @@ def fn_extract_deck_profile(str_mjr_axis_shp_path,
     
         plt.cla()
         plt.close('all')
+        
+        # -------------
+        # create a pandas dataframe from lists
+        df_unfilter_sta_elev = pd.DataFrame(list(zip(list_station,list_ground_elev,list_deck_elev)),
+                                            columns = ['station','ground_elev','deck_elev'])
+        
+        str_csv_file_name = str(index) + '_unfiltered_deck.csv'
+        str_csv_path = str_output_dir + '\\' + str_csv_file_name
+        
+        df_unfilter_sta_elev.to_csv(str_csv_path, index = False)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

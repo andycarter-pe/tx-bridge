@@ -24,7 +24,7 @@ import time
 import datetime
 import warnings
 
-from multiprocessing.pool import ThreadPool
+#from multiprocessing.pool import ThreadPool
 
 import multiprocessing as mp
 import tqdm
@@ -200,19 +200,17 @@ def fn_get_las_tiles(gdf_current_tile):
     str_tile_name = gdf_current_tile.iloc[0]['tile_name']
     ept_source = gdf_current_tile.iloc[0]['ept_source']
     INT_CLASS = gdf_current_tile.iloc[0]['class']
+    STR_OUTPUT_PATH = gdf_current_tile.iloc[0]['out_dir']
     
-    STR_OUTPUT_PATH = r'C:\test\cloud_harvest\cloud_output\\'
-    
+
     b = gdf_current_tile.iloc[0]['geometry'].bounds #the bounding box of the requested lambert polygon
 
     str_classification = "Classification[" + str(INT_CLASS) + ":" + str(INT_CLASS) + "]"
     
-    # TODO - This is hardcoded - fix this!!! - 2022.04.26
-    # ################
-    str_las = STR_OUTPUT_PATH + str_tile_name + '_class_' + str(INT_CLASS) + '.las'
-    # ################
-
     
+    str_las = STR_OUTPUT_PATH + '\\' + str_tile_name + '_class_' + str(INT_CLASS) + '.las'
+
+
     #if n_points > 0:
         # get and save the point cloud with the requested classificaton
 
@@ -287,12 +285,17 @@ def fn_point_clouds_by_class(str_input_path,
 
     print('Determining Entwine paths: ' + str(len(gdf_tiles)) + ' tiles')
     
+    if not os.path.exists(str_output_dir):
+        os.mkdir(str_output_dir)
     
     # append tiles with the entwine path
     gdf_tiles_ept = fn_determine_ept_source_per_tile(gdf_tiles)
     
     # append the dataframe with the classification
     gdf_tiles_ept['class'] = int_class
+    
+    # append the dataframe with the output directory
+    gdf_tiles_ept['out_dir'] = str_output_dir
     
     # creating a list of geodataframes (just one row each) for multithreading the pdal requests
     list_of_gdf_tiles = []
