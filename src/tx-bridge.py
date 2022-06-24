@@ -74,7 +74,7 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
                      b_is_feet):
     
     # mannualy setting the step to start computations
-    int_step = 9
+    int_step = 1
     
     flt_start_run_tx_bridge = time.time()
     
@@ -155,7 +155,7 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
     flt_buffer_hull = 30 # distance to extend major axis beyond hull (meters)
     
     
-    str_bridge_polygons_file = str(int_class) + '_ar_3857.shp'
+    str_bridge_polygons_file = 'class_' + str(int_class) + '_ar_3857.shp'
     str_bridge_polygons_path = os.path.join(str_hull_shp_dir, str_bridge_polygons_file)
     
     #str_trans_line_path = str_osm_lines_shp_dir + '\\' + 'osm_trans_ln.shp'
