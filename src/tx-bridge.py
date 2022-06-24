@@ -154,8 +154,12 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
     # ---- Step 4: determine the major axis for each polygon ----
     flt_buffer_hull = 30 # distance to extend major axis beyond hull (meters)
     
-    str_bridge_polygons_path = str_hull_shp_dir + '\\' + 'class_' + str(int_class) + '_ar_3857.shp'
-    str_trans_line_path = str_osm_lines_shp_dir + '\\' + 'osm_trans_ln.shp'
+    
+    str_bridge_polygons_file = str(int_class) + '_ar_3857.shp'
+    str_bridge_polygons_path = os.path.join(str_hull_shp_dir, str_bridge_polygons_file)
+    
+    #str_trans_line_path = str_osm_lines_shp_dir + '\\' + 'osm_trans_ln.shp'
+    str_trans_line_path = os.path.join(str_osm_lines_shp_dir, 'osm_trans_ln.shp')
     
     # create a folder for major axis lines
     str_mjr_axis_shp_dir = os.path.join(str_out_arg, "04_major_axis_lines") 
@@ -186,7 +190,8 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
     
     # ---- Step 6: flip major axis (left to right downstream) ----
     flt_mjr_axis = 0.3 # distance to buffer major axis
-    str_major_axis_ln_path = str_mjr_axis_shp_dir + '//' + 'mjr_axis_ln.shp'
+    #str_major_axis_ln_path = str_mjr_axis_shp_dir + '//' + 'mjr_axis_ln.shp'
+    str_major_axis_ln_path = os.path.join(str_mjr_axis_shp_dir, 'mjr_axis_ln.shp')
     
     # create a folder for major axis lines
     str_flip_axis_dir = os.path.join(str_out_arg, "06_flipped_major_axis") 
@@ -203,7 +208,8 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
     flt_perct_on_line = 0.35 # ratio distance to create a point on major axis    
     flt_offset  = 0.01 # distance to search around mjr axis' points for nearest osm line
     
-    str_mjr_axis_shp_path = str_flip_axis_dir + '\\' + 'flip_mjr_axis_ln.shp'
+    #str_mjr_axis_shp_path = str_flip_axis_dir + '\\' + 'flip_mjr_axis_ln.shp'
+    str_mjr_axis_shp_path = os.path.join(str_flip_axis_dir, 'flip_mjr_axis_ln.shp')
     
     # create a folder for major axis with names lines
     str_mjr_axis_names_dir = os.path.join(str_out_arg, "07_major_axis_names") 
