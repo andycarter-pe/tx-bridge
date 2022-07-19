@@ -13,14 +13,12 @@
 # (5) create_hull_dem.py
 # (6) flip_major_axis.py
 # (7) assign_osm_names_major_axis.py
-# (8) extract_deck_profile.py
-#
-# TODO - Not yet created - 2022.06.16
-# (9) build_object_model_output.py
+#  ###  (8) extract_deck_profile.py - Not Functioning
+# (9) get_usgs_dem_from_shape.py
 # (10) conmposite_terrain.py
-#
+# ### (11) build_object_model_output.py - Not built
 # Created by: Andy Carter, PE
-# Last revised - 2022.06.17
+# Last revised - 2022.07.19
 #
 # Main code for tx-bridge
 # Uses the 'tx-bridge' conda environment
@@ -34,7 +32,7 @@ from flip_major_axis import fn_flip_major_axis
 from assign_osm_names_major_axis import fn_assign_osm_names_major_axis
 from extract_deck_profile import fn_extract_deck_profile
 from get_usgs_dem_from_shape import fn_get_usgs_dem_from_shape
-# fn_get_usgs_dem_from_shape(str_input_path,str_output_dir,int_res,int_buffer,int_tile,b_is_feet,str_field_name)
+from composite_terrain import fn_composite_terrain
 
 import argparse
 import os
@@ -71,10 +69,11 @@ def str2bool(v):
 def fn_run_tx_bridge(str_input_shp_path_arg,
                      str_out_arg,
                      int_class,
-                     b_is_feet):
+                     b_is_feet,
+                     int_start_step):
     
     # mannualy setting the step to start computations
-    int_step = 1
+    int_step = int_start_step
     
     flt_start_run_tx_bridge = time.time()
     
@@ -90,6 +89,7 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
     print("  ---(o) OUTPUT DIRECTORY: " + str(str_out_arg))   
     print("  ---[c]   Optional: Point Classification: " + str(int_class))
     print("  ---[v]   Optional: Vertical in feet: " + str(b_is_feet))
+    print("  ---[s]   Optional: Starting step: " + str(int_start_step))
 
     print("===================================================================")
     print(" ")
@@ -186,6 +186,11 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
                             str_deck_dem_dir,
                             flt_dem_resolution,
                             b_is_feet)
+        '''
+        # delete the extra dems
+        fn_delete_files(str_deck_dem_dir)
+        '''
+        
     # --------------------------------------------------
     
     # ---- Step 6: flip major axis (left to right downstream) ----
@@ -230,7 +235,7 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
     flt_xs_sample_interval = 1 # interval to sample points along a line for cross section - crs units
     
     # create a folder for deck profile plots and tables
-    str_deck_profiles_dir = os.path.join(str_out_arg, "08_deck_profiles") 
+    str_deck_profiles_dir = os.path.join(str_out_arg, "08_deck_profiles_NONE") 
     if not os.path.exists(str_deck_profiles_dir):
         os.mkdir(str_deck_profiles_dir)
      
@@ -244,8 +249,9 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
                                 int_resolution,
                                 flt_xs_sample_interval)
     '''
+ 
     # --------------------------------------------------
-    
+
     # ---- Step 9: get bare earth terrain for each aoi polygon ----
     int_res = 3 # resolution of the bare earth dem
     int_buffer = 300 # buffer for each polygon (meters)
@@ -258,33 +264,34 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
         os.mkdir(str_bare_earth_dem_dir)
         
     # TODO - deletion error - 2022.06.17
+
     if int_step <= 9:
-        fn_get_usgs_dem_from_shape(str_input_shp_path_arg,
-                                   str_bare_earth_dem_dir,
-                                   int_res,
-                                   int_buffer,
-                                   int_tile,
-                                   b_is_feet,
-                                   str_field_name)
+        str_input_path_step_10 = fn_get_usgs_dem_from_shape(str_input_shp_path_arg,
+                                                            str_bare_earth_dem_dir,
+                                                            int_res,
+                                                            int_buffer,
+                                                            int_tile,
+                                                            b_is_feet,
+                                                            str_field_name)
+
     # --------------------------------------------------
     
     # ---- Step 10: merge the dems (bridge and bare earth) ----
+    str_output_dem_name = ''
     
-    int_output_res = 3 # resolution of the aggregated dem (meters)
-    # create a folder for healed dems (bridge deck and bare earth)
     str_healed_dem_dir = os.path.join(str_out_arg, "10_healed_dem") 
     if not os.path.exists(str_healed_dem_dir):
         os.mkdir(str_healed_dem_dir)
         
     # run the first script (find_point_clouds_by_class)
-    '''
+
     if int_step <= 10:
-        fn_heal_dems(str_input_shp_path_arg,
-                     str_healed_dem_dir,
-                     str_bridge_polygons_path,
-                     str_deck_dem_dir
-                     int_output_res)
-    '''
+        fn_composite_terrain(str_input_path_step_10,
+                             str_deck_dem_dir,
+                             str_healed_dem_dir,
+                             str_output_dem_name)
+
+
     # --------------------------------------------------
     
     flt_end_run_run_tx_bridge = time.time()
@@ -334,14 +341,24 @@ if __name__ == '__main__':
                         metavar='T/F',
                         type=str2bool)
     
+    parser.add_argument('-s',
+                    dest = "int_start_step",
+                    help='OPTIONAL: starting computational step: Default=1',
+                    required=False,
+                    default=1,
+                    metavar='INTEGER',
+                    type=int)
+    
     args = vars(parser.parse_args())
     
     str_input_shp_path_arg = args['str_input_shp_path_arg']
     str_out_arg = args['str_out_arg']
     int_class = args['int_class']
     b_is_feet = args['b_is_feet']
+    int_start_step = args['int_start_step']
     
     fn_run_tx_bridge(str_input_shp_path_arg,
                      str_out_arg,
                      int_class,
-                     b_is_feet)
+                     b_is_feet,
+                     int_start_step)

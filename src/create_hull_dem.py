@@ -46,13 +46,28 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 # ````````````````````````````````````````````````````````
 
+# -------------------------------------------
+def fn_delete_files(str_output_dir):
+    
+    list_files = []
+    
+    for root, dirs, files in os.walk(str_output_dir):
+        for file in files:
+            if file.endswith(".tif") or file.endswith(".TIF"):
+                # Note the case sensitive issue
+                str_file_path = os.path.join(root, file)
+                list_files.append(str_file_path)
+    
+    for str_file_path in list_files:
+        if str_file_path[-7:-4] == 'dem':
+            os.remove(str_file_path)
+# -------------------------------------------
 
 # --------------------------------------------------------
 def fn_create_hull_dems(str_bridge_polygons_path,str_output_dir,flt_dem_resolution,b_is_feet):
     
     """
-    Determine the major axis line from the bridge hull polygons and the
-    OpenStreetMap lines.
+    Create DEMS of the hulls from the classified point clouds
 
     Args:
         str_bridge_polygons_path: path convex hull polygons
@@ -94,7 +109,7 @@ def fn_create_hull_dems(str_bridge_polygons_path,str_output_dir,flt_dem_resoluti
         list_clouds = eval(gdf_bridge_ar.iloc[index]['las_paths'])
         
         # create a file name
-        str_bridge_dem = str_output_dir + '\\' + str(index) + '_bridge_deck_dem.tif'
+        str_bridge_dem = os.path.join(str_output_dir, str(index) + '_bridge_deck_dem.tif')
         
         # create a pdal pipeline dictionaries - specific tile request
     
@@ -153,40 +168,41 @@ def fn_create_hull_dems(str_bridge_polygons_path,str_output_dir,flt_dem_resoluti
         if n_points > 0:
             #bridges were found
     
-            # read the DEM as a "Rioxarray"
-            bridge_dem = rxr.open_rasterio(str_bridge_dem, masked=True).squeeze()
-    
-            # get a geodataframe of just one row
-            gdf_singlerow = gdf_bridge_ar.iloc[[index],:]
-    
-            # clip the DEM from points to the polygon limits
-            clipped = bridge_dem.rio.clip(gdf_singlerow.geometry,
-                                          gdf_singlerow.geometry.crs,
-                                          drop=True, invert=False)
-    
-            # fill in the missing pixels
-            filled = clipped.rio.interpolate_na()
-    
-            # clip the filled-in data to the polygon boundary
-            clipped2 = filled.rio.clip(gdf_singlerow.geometry,
-                                       gdf_bridge_ar.geometry.crs,
-                                       drop=True, invert=False)
-    
-            # convert vertical values to meters
-            if b_is_feet:
-                # scale the raster from meters to feet
-                clipped2 = clipped2 * 3.28084
-    
-                # write out the raster
-                bridge_dem_out = str_bridge_dem[:-4] + '_vert_ft.tif'
-                clipped2.rio.to_raster(bridge_dem_out, compress='LZW', dtype="float32")
+            with rxr.open_rasterio(str_bridge_dem, masked=True) as bridge_dem:
+                # read the DEM as a "Rioxarray"
+                #bridge_dem = rxr.open_rasterio(str_bridge_dem, masked=True).squeeze()
+        
+                # get a geodataframe of just one row
+                gdf_singlerow = gdf_bridge_ar.iloc[[index],:]
+        
+                # clip the DEM from points to the polygon limits
+                clipped = bridge_dem.rio.clip(gdf_singlerow.geometry,
+                                              gdf_singlerow.geometry.crs,
+                                              drop=True, invert=False)
+        
+                # fill in the missing pixels
+                filled = clipped.rio.interpolate_na()
+        
+                # clip the filled-in data to the polygon boundary
+                clipped2 = filled.rio.clip(gdf_singlerow.geometry,
+                                           gdf_bridge_ar.geometry.crs,
+                                           drop=True, invert=False)
+        
+                # convert vertical values to meters
+                if b_is_feet:
+                    # scale the raster from meters to feet
+                    clipped2 = clipped2 * 3.28084
+        
+                    # write out the raster
+                    bridge_dem_out = str_bridge_dem[:-4] + '_vert_ft.tif'
+                    clipped2.rio.to_raster(bridge_dem_out, compress='LZW', dtype="float32")
+                    
+                else:
+                    # write out the raster
+                    bridge_dem_out = str_bridge_dem[:-4] + '_vert_m.tif'
+                    clipped2.rio.to_raster(bridge_dem_out, compress='LZW', dtype="float32")
                 
-            else:
-                # write out the raster
-                bridge_dem_out = str_bridge_dem[:-4] + '_vert_m.tif'
-                clipped2.rio.to_raster(bridge_dem_out, compress='LZW', dtype="float32")
-                
-        # TODO - Need to delete the first raster created - prior to clipping - 2022.05.16
+    fn_delete_files(str_output_dir)
 # --------------------------------------------------------
     
 

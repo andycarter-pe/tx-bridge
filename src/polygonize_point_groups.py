@@ -4,7 +4,7 @@
 #
 # Created by: Andy Carter, PE
 # Created - 2022.04.27
-# Last revised - 2022.04.27
+# Last revised - 2022.07.19
 #
 # tx-bridge - second processing script
 # Uses the 'pdal' conda environment
@@ -175,12 +175,22 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
                 # Note the case sensitive issue
                 str_file_path = os.path.join(root, file)
                 list_files.append(str_file_path)
-                
+    
+    # get list of just the las files with points
+    list_files_with_points = []
+    
+    for str_las_file_path in list_files:
+        # read in the point cloud with pylas
+        pcloud = pylas.read(str_las_file_path)
+        points = [fn_return_xyc(i) for i in pcloud]
+        if len(points) > 0:
+            list_files_with_points.append(str_las_file_path)
+    
     list_gdf_hulls = []
     
     list_of_dict = []
     
-    for i in list_files:
+    for i in list_files_with_points:
         dict_params = {'str_las_path': i,
                        'int_lidar_class': int_class,
                        'flt_epsilon': flt_epsilon,
@@ -188,7 +198,7 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
         list_of_dict.append(dict_params)
         
     
-    l = len(list_files)
+    l = len(list_files_with_points)
     p = mp.Pool(processes = (mp.cpu_count() - 1))
         
     list_gdf_hulls = list(tqdm.tqdm(p.imap(fn_get_hull_polygons, list_of_dict),

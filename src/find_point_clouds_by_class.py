@@ -30,6 +30,8 @@ import multiprocessing as mp
 import tqdm
 from time import sleep
 
+from dateutil.parser import parse
+
 # ************************************************************
 
 
@@ -179,10 +181,30 @@ def fn_determine_ept_source_per_tile(gdf_tiles):
         # clip the footprints to the requested boundary
         gdf_entwine_footprints_clip = gpd.overlay(gdf_entwine_footprints, gdf_current_poly, how='intersection')
     
-        # Set the EPT url to the first point cloud found
         # TODO - what if there are no ept sources - 2022.04.26
-        # TODO - what is there are more than one ept - find best - 2022.04.26
-        ept_source = gdf_entwine_footprints_clip.loc[0, 'url']
+        
+        if len(gdf_entwine_footprints_clip) == 1:
+            int_index_max_year = 0
+            #ept_source = gdf_entwine_footprints_clip.loc[0, 'url']
+        else:
+            list_year_flight = []
+            # determine the 'most current'
+            for index, row in gdf_entwine_footprints_clip.iterrows():
+                # get the name of the dataset - hopefully contains a year in the name
+                str_flight_name = gdf_entwine_footprints_clip.at[index,'name']
+
+                try:
+                    # parse out the year as an integer
+                    int_year_flight = parse(str_flight_name, fuzzy=True).year
+                except:
+                    # if there is no year set to -1
+                    int_year_flight = -1
+                list_year_flight.append(int_year_flight)
+                
+            int_index_max_year = list_year_flight.index(max(list_year_flight))
+            
+        ept_source = gdf_entwine_footprints_clip.loc[int_index_max_year, 'url']    
+        #print(ept_source)
         
         list_ept_tiles.append(ept_source)
     
@@ -206,9 +228,9 @@ def fn_get_las_tiles(gdf_current_tile):
     b = gdf_current_tile.iloc[0]['geometry'].bounds #the bounding box of the requested lambert polygon
 
     str_classification = "Classification[" + str(INT_CLASS) + ":" + str(INT_CLASS) + "]"
-    
-    
-    str_las = STR_OUTPUT_PATH + '\\' + str_tile_name + '_class_' + str(INT_CLASS) + '.las'
+     
+    str_las = os.path.join(STR_OUTPUT_PATH, str_tile_name + '_class_' + str(INT_CLASS) + '.las')
+    #str_las = STR_OUTPUT_PATH + '\\' + str_tile_name + '_class_' + str(INT_CLASS) + '.las'
 
 
     #if n_points > 0:

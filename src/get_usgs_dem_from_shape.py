@@ -211,7 +211,7 @@ def fn_get_usgs_dem_from_shape(str_input_path,
     os.makedirs(STR_OUTPUT_PATH, exist_ok=True)
     
     # into the folder
-    STR_OUTPUT_PATH += '\\'
+    #STR_OUTPUT_PATH += '\\'
     
     # read the "area of interest" shapefile in to geopandas dataframe
     gdf_aoi_prj = gpd.read_file(STR_AOI_SHP_PATH)
@@ -362,7 +362,8 @@ def fn_get_usgs_dem_from_shape(str_input_path,
     
         int_count = 0
         for item_url in list_str_url:
-            str_filename = STR_OUTPUT_PATH + str_unique_tag + '_USGS_WCS_DEM_' 
+            str_filename = os.path.join(STR_OUTPUT_PATH, str_unique_tag + '_USGS_WCS_DEM_')
+            #str_filename = STR_OUTPUT_PATH + str_unique_tag + '_USGS_WCS_DEM_' 
             str_filename += str(list_str_tile_name[int_count])
             str_filename += '.tif'
             list_tile_download_path.append(str_filename)
@@ -410,8 +411,9 @@ def fn_get_usgs_dem_from_shape(str_input_path,
                          "height": mosaic.shape[1],
                          "width": mosaic.shape[2],
                          "transform": out_trans, })
-    
-        str_out_tiff_path = STR_OUTPUT_PATH + str_unique_tag + '_merge_DEM' + '.tif'
+        
+        str_out_tiff_path = os.path.join(STR_OUTPUT_PATH, str_unique_tag + '_merge_DEM' + '.tif')
+        #str_out_tiff_path = STR_OUTPUT_PATH + str_unique_tag + '_merge_DEM' + '.tif'
     
         # Write the updated DEM to the specified file path
         with rasterio.open(str_out_tiff_path, "w", **out_meta) as dest:
@@ -448,16 +450,19 @@ def fn_get_usgs_dem_from_shape(str_input_path,
             
             # set the name from input field if available
             if b_have_valid_label_field:
-                str_dem_out = STR_OUTPUT_PATH + str(gdf_aoi_lambert_current[STR_FIELD_TO_LABEL][0]) + '.tif'
+                str_dem_out = os.path.join(STR_OUTPUT_PATH, str(gdf_aoi_lambert_current[STR_FIELD_TO_LABEL][0]) + '.tif')
+                #str_dem_out = STR_OUTPUT_PATH + str(gdf_aoi_lambert_current[STR_FIELD_TO_LABEL][0]) + '.tif'
             else:
-                str_dem_out = STR_OUTPUT_PATH + str_unique_tag + '_clip_DEM' + '.tif'
+                str_dem_out = os.path.join(STR_OUTPUT_PATH, str_unique_tag + '_clip_DEM' + '.tif')
+                #str_dem_out = STR_OUTPUT_PATH + str_unique_tag + '_clip_DEM' + '.tif'
                 
             usgs_wcs_local_proj_clipped.rio.to_raster(str_dem_out, compress='LZW', dtype="float32")
     
-            # remove the merged DEM
-            if os.path.exists(str_out_tiff_path):
-                os.remove(str_out_tiff_path)
+        # remove the merged DEM
+        if os.path.exists(str_out_tiff_path):
+            os.remove(str_out_tiff_path)
     
+    return str_dem_out
     print(" ") 
     print('ALL AREAS COMPLETE')
     
