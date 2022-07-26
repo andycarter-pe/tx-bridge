@@ -4,7 +4,7 @@
 #
 # Created by: Andy Carter, PE
 # Created - 2022.04.26
-# Last revised - 2022.04.26
+# Last revised - 2022.07.22
 #
 # tx-bridge - first processing script
 # Uses the 'pdal' conda environment
@@ -181,12 +181,10 @@ def fn_determine_ept_source_per_tile(gdf_tiles):
         # clip the footprints to the requested boundary
         gdf_entwine_footprints_clip = gpd.overlay(gdf_entwine_footprints, gdf_current_poly, how='intersection')
     
-        # TODO - what if there are no ept sources - 2022.04.26
-        
         if len(gdf_entwine_footprints_clip) == 1:
             int_index_max_year = 0
             #ept_source = gdf_entwine_footprints_clip.loc[0, 'url']
-        else:
+        elif len(gdf_entwine_footprints_clip) > 1:
             list_year_flight = []
             # determine the 'most current'
             for index, row in gdf_entwine_footprints_clip.iterrows():
@@ -200,13 +198,19 @@ def fn_determine_ept_source_per_tile(gdf_tiles):
                     # if there is no year set to -1
                     int_year_flight = -1
                 list_year_flight.append(int_year_flight)
-                
-            int_index_max_year = list_year_flight.index(max(list_year_flight))
             
-        ept_source = gdf_entwine_footprints_clip.loc[int_index_max_year, 'url']    
-        #print(ept_source)
+            # find the index of the max year from multiple sources
+            int_index_max_year = list_year_flight.index(max(list_year_flight))
+        else:
+            # no ept sources were found
+            ept_source = 'none_found'
+            list_ept_tiles.append(ept_source)
         
-        list_ept_tiles.append(ept_source)
+        if len(gdf_entwine_footprints_clip) > 0:
+            # log only if there is a point cloud source found
+            ept_source = gdf_entwine_footprints_clip.loc[int_index_max_year, 'url']    
+            #print(ept_source)
+            list_ept_tiles.append(ept_source)
     
     # add the list to geodataframe
     gdf_tiles['ept_source'] = list_ept_tiles
@@ -225,48 +229,47 @@ def fn_get_las_tiles(gdf_current_tile):
     STR_OUTPUT_PATH = gdf_current_tile.iloc[0]['out_dir']
     
 
-    b = gdf_current_tile.iloc[0]['geometry'].bounds #the bounding box of the requested lambert polygon
-
-    str_classification = "Classification[" + str(INT_CLASS) + ":" + str(INT_CLASS) + "]"
-     
-    str_las = os.path.join(STR_OUTPUT_PATH, str_tile_name + '_class_' + str(INT_CLASS) + '.las')
-    #str_las = STR_OUTPUT_PATH + '\\' + str_tile_name + '_class_' + str(INT_CLASS) + '.las'
-
-
-    #if n_points > 0:
-        # get and save the point cloud with the requested classificaton
-
-    pipeline_class_las = {
-    "pipeline": [
-        {   
-            'bounds':str(([b[0], b[2]],[b[1], b[3]])),
-            "filename":ept_source,
-            "type":"readers.ept",
-            "tag":"readdata"
-        },
-        {   
-            "type":"filters.range",
-            "limits": str_classification,
-            "tag":"class_points"
-        },
-        {
-            "filename": str_las,
-            "inputs": [ "class_points" ],
-            "type": "writers.las"
-        }
-    ]}
-    #execute the pdal pipeline
-    pipeline = pdal.Pipeline(json.dumps(pipeline_class_las))
-    n_points = pipeline.execute()
+    if ept_source != 'none_found':
+        b = gdf_current_tile.iloc[0]['geometry'].bounds #the bounding box of the requested lambert polygon
+    
+        str_classification = "Classification[" + str(INT_CLASS) + ":" + str(INT_CLASS) + "]"
+         
+        str_las = os.path.join(STR_OUTPUT_PATH, str_tile_name + '_class_' + str(INT_CLASS) + '.las')
+    
+        #if n_points > 0:
+            # get and save the point cloud with the requested classificaton
+    
+        pipeline_class_las = {
+        "pipeline": [
+            {   
+                'bounds':str(([b[0], b[2]],[b[1], b[3]])),
+                "filename":ept_source,
+                "type":"readers.ept",
+                "tag":"readdata"
+            },
+            {   
+                "type":"filters.range",
+                "limits": str_classification,
+                "tag":"class_points"
+            },
+            {
+                "filename": str_las,
+                "inputs": [ "class_points" ],
+                "type": "writers.las"
+            }
+        ]}
+        #execute the pdal pipeline
+        pipeline = pdal.Pipeline(json.dumps(pipeline_class_las))
+        n_points = pipeline.execute()
+        
+        if n_points > 0:
+            return(str_las)
+        else:
+            pass
+            # need to delete this file
     
     sleep(0.01) # this allows the tqdm progress bar to update
     
-    if n_points > 0:
-        return(str_las)
-    else:
-        pass
-        # need to delete this file
-        
 # ===================================================================
 
 

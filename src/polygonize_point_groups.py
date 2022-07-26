@@ -233,6 +233,7 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
     gdf_intersection = gdf_merge_polygons.overlay(gdf_hulls, how='intersection')
     
     list_clouds_per_poly = []
+    
     for i in range(0, 0 + len(gdf_merge_polygons)):
         # get all the rows that match the temp_id
         gdf_current_poly = gdf_intersection.loc[gdf_intersection['temp_id'] == i]
@@ -251,10 +252,15 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
     del gdf_merge_polygons['temp_id']
     
     # stringify list
+    # TODO - 2022.07.21 - what is the list_clouds_per_poly is too long to fit into a field?
     gdf_merge_polygons['las_paths'] = gdf_merge_polygons['las_paths'].astype(str)
     
-    str_file_shp_to_write = str_output_dir + '\\' + 'class_' + str(int_class) +'_ar_3857.shp'
+    str_file_shp_to_write = os.path.join(str_output_dir, 'class_' + str(int_class) +'_ar_3857.shp')
     gdf_merge_polygons.to_file(str_file_shp_to_write)
+    
+    # the geopackage does not truncate the 'las_path' field name converted from list
+    str_file_gpkg_to_write = os.path.join(str_output_dir, 'class_' + str(int_class) +'_ar_3857.gpkg')
+    gdf_merge_polygons.to_file(str_file_gpkg_to_write, driver='GPKG')
     print("+-----------------------------------------------------------------+")
     
 # `````````````````````````````````````````````````````````````

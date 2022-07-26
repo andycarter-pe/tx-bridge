@@ -221,7 +221,7 @@ def fn_determine_major_axis(str_bridge_polygons_path,str_trans_line_path,str_out
     del gdf_bridge_mjr_axis_ln['las_paths']
     del gdf_bridge_mjr_axis_ln['geometry']
     
-    str_file_shp_to_write = str_output_dir + '\\' +'mjr_axis_ln.shp'
+    str_file_shp_to_write = os.path.join(str_output_dir, 'mjr_axis_ln.shp')
     gdf_bridge_mjr_axis_ln.to_file(str_file_shp_to_write)
 
 # --------------------------------------------------------

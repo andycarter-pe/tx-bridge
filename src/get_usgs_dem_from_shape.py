@@ -22,10 +22,7 @@
 #   FORMAT=GeoTiff
 #
 # Created by: Andy Carter, PE
-# Last revised - 2021.10.24
-#
-# ras2fim - Third pre-processing script (if no terrain provided)
-# Uses the 'ras2fim' conda environment
+# Last revised - 2022.07.21
 
 
 # ************************************************************
@@ -101,7 +98,34 @@ def fn_download_tiles(list_tile_url):
         list_tile_url[0] -- download URL
         list_tile_url[1] -- local directory to store the DEM
     """
-    urllib.request.urlretrieve(list_tile_url[0], list_tile_url[1])
+    # urllib.request.urlretrieve(list_tile_url[0], list_tile_url[1])
+    
+    # revised 2022.07.21 for retries
+    int_num_retries = 5
+    int_backoff = 2 # exponential backoff delay
+    flt_delay_time = 0.5 # delay time in seconds
+    
+    int_remaining_download_tries = int_num_retries
+    
+    while int_remaining_download_tries > 0:
+        try:
+            urllib.request.urlretrieve(list_tile_url[0], list_tile_url[1])
+            time.sleep(0.1)
+            # sucsessful download
+            int_remaining_download_tries = 0
+        except:
+            # determine which attempt this is
+            int_loop_count = int_num_retries - int_remaining_download_tries + 1
+            
+            # delay based on attempt: example 2: 2^2 * 0.5 = 2 seconds
+            # example 4: 4^2 * 0.5 = 8 seconds
+            # exponential backoff
+            flt_loop_delay = int_loop_count ** int_backoff * flt_delay_time
+            print("error downloading " + list_tile_url[0] +" on trial no: " + str(int_loop_count))
+            time.sleep(flt_loop_delay) # backoff untill retry
+            int_remaining_download_tries = int_remaining_download_tries - 1
+        #else:
+        #    pass
 # .........................
 
 # >>>>>>>>>>>>>>>>>>>>>>>>

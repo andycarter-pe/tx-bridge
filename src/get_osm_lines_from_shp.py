@@ -3,7 +3,7 @@
 #
 # Created by: Andy Carter, PE
 # Created - 2022.04.27
-# Last revised - 2022.05.16
+# Last revised - 2022.07.20
 #
 # tx-bridge - third processing script
 # Uses the 'pdal' conda environment
@@ -110,70 +110,92 @@ def fn_get_osm_lines_from_shp(str_input_path,str_output_dir,b_simplify_graph,b_g
     # shapely geom of bbox from tuple
     bbox_polygon = shapely.geometry.box(*tup_bbox, ccw=True)
     
+    b_got_rail = False
     if b_get_railroad:
-        G_rail = ox.graph_from_polygon(bbox_polygon,
-                        retain_all=False, truncate_by_edge=False, simplify=False,
-                        custom_filter='["railway"~"tram|rail"]')
-
-        # convert the graph to a projected graph
-        P_rail = ox.projection.project_graph(G_rail, to_crs=source_crs)
+        try:
+            G_rail = ox.graph_from_polygon(bbox_polygon,
+                            retain_all=False, truncate_by_edge=False, simplify=False,
+                            custom_filter='["railway"~"tram|rail"]')
+            b_got_rail = True
+            
+            # convert the graph to a projected graph
+            P_rail = ox.projection.project_graph(G_rail, to_crs=source_crs)
         
-        # copy the projected graph
-        P_rail_simple = P_rail.copy()
+            # copy the projected graph
+            P_rail_simple = P_rail.copy()
         
-        if b_simplify_graph:
-            # simplify the road graph
-            P_rail_simple = ox.simplify_graph(P_rail_simple)
+            if b_simplify_graph:
+                # simplify the road graph
+                P_rail_simple = ox.simplify_graph(P_rail_simple)
         
-        # projected graph to geodataframes
-        gdf_rail_nodes, gdf_rail_edges = ox.graph_to_gdfs(P_rail_simple)
+            # projected graph to geodataframes
+            gdf_rail_nodes, gdf_rail_edges = ox.graph_to_gdfs(P_rail_simple)
         
-        # remove the MultiIndexing
-        gdf_rail_edges.reset_index(inplace=True)
+            # remove the MultiIndexing
+            gdf_rail_edges.reset_index(inplace=True)
+        except:
+            print('Warning:  Railroad data not found on OSM')
     
+    b_got_drive = False
     if b_get_drive_service:
-        # get the roadway graph
-        G = ox.graph_from_polygon(bbox_polygon, network_type='drive_service', simplify=False, retain_all=True)
-        
-        # convert the graph to a projected graph
-        P = ox.projection.project_graph(G, to_crs=source_crs)
-        
-        # copy the projected graph
-        P2 = P.copy()
-        
-        if b_simplify_graph:
-            # simplify the road graph
-            P2 = ox.simplify_graph(P2)
-        
-        # projected graph to geodataframes
-        gdf_road_nodes, gdf_road_edges = ox.graph_to_gdfs(P2)
-        
-        # remove the MultiIndexing
-        gdf_road_edges.reset_index(inplace=True)
+        try:
+            # get the roadway graph
+            G = ox.graph_from_polygon(bbox_polygon, network_type='drive_service', simplify=False, retain_all=True)
+            
+            b_got_drive = True
+            
+            # convert the graph to a projected graph
+            P = ox.projection.project_graph(G, to_crs=source_crs)
+            
+            # copy the projected graph
+            P2 = P.copy()
+            
+            if b_simplify_graph:
+                # simplify the road graph
+                P2 = ox.simplify_graph(P2)
+            
+            # projected graph to geodataframes
+            gdf_road_nodes, gdf_road_edges = ox.graph_to_gdfs(P2)
+            
+            # remove the MultiIndexing
+            gdf_road_edges.reset_index(inplace=True)
+        except:
+            print('Warning:  Roadway data not found')
     
-    if b_get_railroad and b_get_drive_service:
+    b_file_to_create = False
+    
+    # both rail and drive data
+    if b_got_rail and b_got_drive:
         # merge the two dataframes
         gdf_trans_edge = pd.concat([gdf_rail_edges, gdf_road_edges])
-    
-    if b_get_railroad and not b_get_drive_service:
+        b_file_to_create = True
+            
+    if b_got_rail and not b_got_drive:
+        # rail only
         gdf_trans_edge = gdf_rail_edges
+        b_file_to_create = True
         
-    if not b_get_railroad and  b_get_drive_service:
+    if not b_got_rail and b_got_drive:
+        # drive only
         gdf_trans_edge = gdf_road_edges
+        b_file_to_create = True
+    
+    if b_file_to_create:
+        # sample to the selected coloumns
+        gdf_edges_mod = gdf_trans_edge[['u','v', 'osmid', 'name','geometry']]
         
-    # sample to the selected coloumns
-    gdf_edges_mod = gdf_trans_edge[['u','v', 'osmid', 'name','geometry']]
-    
-    # convert coloumns to string (to stringify lists)
-    gdf_edges_mod['osmid'] = gdf_edges_mod['osmid'].astype(str)
-    gdf_edges_mod['name'] = gdf_edges_mod['name'].astype(str)
-    
-    # write a shapefile of the lines
-    # TODO - file name consideration - 2022.05.16
-    str_file_shp_to_write = str_output_dir + '\\' +'osm_trans_ln.shp'
-    gdf_edges_mod.to_file(str_file_shp_to_write)
-    
-    return gdf_edges_mod
+        # convert coloumns to string (to stringify lists)
+        gdf_edges_mod['osmid'] = gdf_edges_mod['osmid'].astype(str)
+        gdf_edges_mod['name'] = gdf_edges_mod['name'].astype(str)
+        
+        # write a shapefile of the lines
+        
+        str_file_shp_to_write = os.path.join(str_output_dir, 'osm_trans_ln.shp')
+        gdf_edges_mod.to_file(str_file_shp_to_write)
+        
+        return gdf_edges_mod
+    else:
+        "ERROR: No OSM data found. (rail or road)"
     
 # --------------------------------------------------------
 

@@ -141,8 +141,37 @@ def fn_flip_major_axis(str_major_axis_ln_path,str_output_dir,flt_mjr_axis):
         # build a URL string
         str_req_url_nhd = query_url_nhd + str_params_encoded
     
+        # --- get geodataframe from the url
+        # revised 2022.07.21 for retries
+        int_num_retries = 5
+        int_backoff = 2 # exponential backoff delay
+        flt_delay_time = 0.5 # delay time in seconds
+        
+        int_remaining_download_tries = int_num_retries
+        
+        while int_remaining_download_tries > 0:
+            try:
+                gdf_from_url = gpd.read_file(str_req_url_nhd)
+                time.sleep(0.1)
+                # sucsessful download
+                int_remaining_download_tries = 0
+            except:
+                # determine which attempt this is
+                int_loop_count = int_num_retries - int_remaining_download_tries + 1
+                
+                # delay based on attempt: example 2: 2^2 * 0.5 = 2 seconds
+                # example 4: 4^2 * 0.5 = 8 seconds
+                # exponential backoff
+                flt_loop_delay = int_loop_count ** int_backoff * flt_delay_time
+                print("error downloading " + str_req_url_nhd +" on trial no: " + str(int_loop_count))
+                time.sleep(flt_loop_delay) # backoff untill retry
+                int_remaining_download_tries = int_remaining_download_tries - 1
+            #else:
+                #pass 
+        # ---------------
+    
         # create a gdf from the requested URL
-        gdf_from_url = gpd.read_file(str_req_url_nhd)
+        #gdf_from_url = gpd.read_file(str_req_url_nhd)
     
         # set the requested gdf projection to WGS -- data returned in LL
         gdf_from_url.set_crs(WGS)
@@ -210,7 +239,8 @@ def fn_flip_major_axis(str_major_axis_ln_path,str_output_dir,flt_mjr_axis):
     gdf_mjr_axis_ln['nhd_name'] = list_nhd_names
     gdf_mjr_axis_ln['reachcode'] = list_nhd_reachcode
     
-    str_file_shp_to_write = str_output_dir + '\\' +'flip_mjr_axis_ln.shp'
+    str_file_shp_to_write = os.path.join(str_output_dir, 'flip_mjr_axis_ln.shp')
+    
     gdf_mjr_axis_ln.to_file(str_file_shp_to_write)
 # ..........................................................
 
