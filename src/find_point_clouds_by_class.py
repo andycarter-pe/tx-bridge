@@ -158,7 +158,11 @@ def fn_create_tiles_gdf (str_aoi_shp_path,
 # -------------------------------------------------------------------
 def fn_determine_ept_source_per_tile(gdf_tiles):
     
-    str_hobu_footprints = r'https://raw.githubusercontent.com/hobu/usgs-lidar/master/boundaries/boundaries.topojson'
+    # TODO - MAC - 2022.10.11 - Need to force an overide
+    
+    str_hobu_footprints = r'D:/Texas_LiDAR_20221205/index/tx_tidar_source_ar_single_tile.geojson'
+    #str_hobu_footprints = r'D:/Llano_bridge_lidar/City_of_Llano/city_of_llano_source_ar_4326.geojson'
+    #str_hobu_footprints = r'https://raw.githubusercontent.com/hobu/usgs-lidar/master/boundaries/boundaries.topojson'
 
     # Get EPT limits from github repository
     gdf_entwine_footprints = gpd.read_file(str_hobu_footprints)
@@ -189,6 +193,7 @@ def fn_determine_ept_source_per_tile(gdf_tiles):
             # determine the 'most current'
             for index, row in gdf_entwine_footprints_clip.iterrows():
                 # get the name of the dataset - hopefully contains a year in the name
+
                 str_flight_name = gdf_entwine_footprints_clip.at[index,'name']
 
                 try:

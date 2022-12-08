@@ -77,8 +77,9 @@ def fn_run_multiple_tx_bridge(str_input_shp_path_arg,
     for index, row in gdf_polygons.iterrows():
         gdf_single_poly = gdf_polygons.loc[[index]]
         
-        str_field_name = gdf_single_poly.iloc[0]['HUC_12']
-        str_sub_folder = os.path.join(str_out_arg, str_field_name)
+        str_field_label = gdf_single_poly.iloc[0][str_field_name]
+        print(str_field_label)
+        str_sub_folder = os.path.join(str_out_arg, str_field_label)
         
         if not os.path.exists(str_sub_folder):
             os.mkdir(str_sub_folder)
@@ -90,7 +91,7 @@ def fn_run_multiple_tx_bridge(str_input_shp_path_arg,
             os.mkdir(str_single_shape_folder)
             
         # single polygon shapefile folder
-        str_single_shape_file = os.path.join(str_single_shape_folder, str_field_name + '_ar.shp')
+        str_single_shape_file = os.path.join(str_single_shape_folder, str_field_label + '_ar.shp')
         gdf_single_poly.to_file(str_single_shape_file)
         
         int_start_step = 1

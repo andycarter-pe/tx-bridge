@@ -174,7 +174,8 @@ def fn_flip_major_axis(str_major_axis_ln_path,str_output_dir,flt_mjr_axis):
         #gdf_from_url = gpd.read_file(str_req_url_nhd)
     
         # set the requested gdf projection to WGS -- data returned in LL
-        gdf_from_url.set_crs(WGS)
+        # TODO - Processing Error ?? - 2022.12.03 - MAC
+        #gdf_from_url.set_crs(WGS)
     
         # convert the line data to local projection
         gdf_from_url_local_prj = gdf_from_url.to_crs(gdf_mjr_axis_ln.crs)

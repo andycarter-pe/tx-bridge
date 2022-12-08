@@ -112,9 +112,17 @@ def fn_get_major_axis_for_polygon(shp_bridge_ar_fn, flt_bridge_buffer_fn, gdf_tr
 
             # TODO - do we want the line nearest the polygon centroid? - 20220418
             # get the longest line of the remaining lines
+            
             int_rowid_longest = gdf_possible_major_axis_cross_twice_ln['length'].idxmax()
 
-            shp_major_axis = gdf_possible_major_axis_cross_twice_ln.iloc[int_rowid_longest]['geometry']
+            try:
+                shp_major_axis = gdf_possible_major_axis_cross_twice_ln.iloc[int_rowid_longest]['geometry']
+            except:
+                # TODO - Error Found - It is possible that that two lines of the same length are found
+                # and these lines are in opposite directions - Need to fix
+                # 2022.12.05 - MAC
+                shp_major_axis = gdf_possible_major_axis_cross_twice_ln.iloc[0]['geometry']
+                print('Error Found')
 
             return(shp_major_axis)
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -222,6 +230,10 @@ def fn_determine_major_axis(str_bridge_polygons_path,str_trans_line_path,str_out
     del gdf_bridge_mjr_axis_ln['geometry']
     
     str_file_shp_to_write = os.path.join(str_output_dir, 'mjr_axis_ln.shp')
+    
+    # TODO - Processing Error - Projection ??? MAC - 2022.12.03
+    gdf_bridge_mjr_axis_ln = gdf_bridge_mjr_axis_ln.set_crs(gdf_trans.crs)
+    
     gdf_bridge_mjr_axis_ln.to_file(str_file_shp_to_write)
 
 # --------------------------------------------------------

@@ -186,82 +186,89 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
         if len(points) > 0:
             list_files_with_points.append(str_las_file_path)
     
-    list_gdf_hulls = []
-    
-    list_of_dict = []
-    
-    for i in list_files_with_points:
-        dict_params = {'str_las_path': i,
-                       'int_lidar_class': int_class,
-                       'flt_epsilon': flt_epsilon,
-                       'int_min_samples': int_min_samples}
-        list_of_dict.append(dict_params)
+    if len(list_files_with_points) > 0:
         
-    
-    l = len(list_files_with_points)
-    p = mp.Pool(processes = (mp.cpu_count() - 1))
+        list_gdf_hulls = []
+        list_of_dict = []
         
-    list_gdf_hulls = list(tqdm.tqdm(p.imap(fn_get_hull_polygons, list_of_dict),
-                                        total = l,
-                                        desc='Processing LAS',
-                                        bar_format = "{desc}:({n_fmt}/{total_fmt})|{bar}| {percentage:.1f}%",
-                                        ncols=65))
-    p.close()
-    p.join()
-    
-    # combine all the returned geodataframes
-    gdf_hulls = pd.concat(list_gdf_hulls, ignore_index=True)
-    
-    # set a projection
-    gdf_hulls = gdf_hulls.set_crs(str_lambert)
-    
-    # merging the overlapping polygons - polygons span multiple tiles
-    # create a union of all the hulls
-    gdf_hulls_merge = gdf_hulls.unary_union
-    
-    # convert the union hulls to geodataframe
-    gdf_merge_polygons = gpd.GeoDataFrame([polygon for polygon in gdf_hulls_merge]).set_geometry(0)
-    
-    gdf_merge_polygons.rename_geometry('geometry', inplace=True)
-    
-    gdf_merge_polygons = gdf_merge_polygons.set_crs(str_lambert)
-    
-    # add a interim bridge id number to determine intersecting tiles
-    gdf_merge_polygons.insert(0, 'temp_id', range(0, 0 + len(gdf_merge_polygons)))
-    
-    # intersect the polygons
-    gdf_intersection = gdf_merge_polygons.overlay(gdf_hulls, how='intersection')
-    
-    list_clouds_per_poly = []
-    
-    for i in range(0, 0 + len(gdf_merge_polygons)):
-        # get all the rows that match the temp_id
-        gdf_current_poly = gdf_intersection.loc[gdf_intersection['temp_id'] == i]
+        for i in list_files_with_points:
+            dict_params = {'str_las_path': i,
+                           'int_lidar_class': int_class,
+                           'flt_epsilon': flt_epsilon,
+                           'int_min_samples': int_min_samples}
+            list_of_dict.append(dict_params)
+            
         
-        #TODO - need to check if no tiles returned - 2022.04.27
+        l = len(list_files_with_points)
+        p = mp.Pool(processes = (mp.cpu_count() - 1))
+            
+        list_gdf_hulls = list(tqdm.tqdm(p.imap(fn_get_hull_polygons, list_of_dict),
+                                            total = l,
+                                            desc='Processing LAS',
+                                            bar_format = "{desc}:({n_fmt}/{total_fmt})|{bar}| {percentage:.1f}%",
+                                            ncols=65))
+        p.close()
+        p.join()
         
-        # convert the coloumn to list
-        list_tiles = gdf_current_poly['las_path'].tolist()
+        # combine all the returned geodataframes
+        gdf_hulls = pd.concat(list_gdf_hulls, ignore_index=True)
         
-        list_clouds_per_poly.append(list_tiles)
+        # set a projection
+        gdf_hulls = gdf_hulls.set_crs(str_lambert)
         
-    # add the 'list_clouds_per_poly' as new coloumn to gdf_merge_polygons
-    gdf_merge_polygons['las_paths'] = list_clouds_per_poly
-    
-    # delete the 'temp_id' coloumn
-    del gdf_merge_polygons['temp_id']
-    
-    # stringify list
-    # TODO - 2022.07.21 - what is the list_clouds_per_poly is too long to fit into a field?
-    gdf_merge_polygons['las_paths'] = gdf_merge_polygons['las_paths'].astype(str)
-    
-    str_file_shp_to_write = os.path.join(str_output_dir, 'class_' + str(int_class) +'_ar_3857.shp')
-    gdf_merge_polygons.to_file(str_file_shp_to_write)
-    
-    # the geopackage does not truncate the 'las_path' field name converted from list
-    str_file_gpkg_to_write = os.path.join(str_output_dir, 'class_' + str(int_class) +'_ar_3857.gpkg')
-    gdf_merge_polygons.to_file(str_file_gpkg_to_write, driver='GPKG')
-    print("+-----------------------------------------------------------------+")
+        # merging the overlapping polygons - polygons span multiple tiles
+        # create a union of all the hulls
+        gdf_hulls_merge = gdf_hulls.unary_union
+        
+        # convert the union hulls to geodataframe
+        gdf_merge_polygons = gpd.GeoDataFrame([polygon for polygon in gdf_hulls_merge]).set_geometry(0)
+        
+        gdf_merge_polygons.rename_geometry('geometry', inplace=True)
+        
+        gdf_merge_polygons = gdf_merge_polygons.set_crs(str_lambert)
+        
+        # add a interim bridge id number to determine intersecting tiles
+        gdf_merge_polygons.insert(0, 'temp_id', range(0, 0 + len(gdf_merge_polygons)))
+        
+        # intersect the polygons
+        gdf_intersection = gdf_merge_polygons.overlay(gdf_hulls, how='intersection')
+        
+        list_clouds_per_poly = []
+        
+        for i in range(0, 0 + len(gdf_merge_polygons)):
+            # get all the rows that match the temp_id
+            gdf_current_poly = gdf_intersection.loc[gdf_intersection['temp_id'] == i]
+            
+            #TODO - need to check if no tiles returned - 2022.04.27
+            
+            # convert the coloumn to list
+            list_tiles = gdf_current_poly['las_path'].tolist()
+            
+            list_clouds_per_poly.append(list_tiles)
+            
+        # add the 'list_clouds_per_poly' as new coloumn to gdf_merge_polygons
+        gdf_merge_polygons['las_paths'] = list_clouds_per_poly
+        
+        # delete the 'temp_id' coloumn
+        del gdf_merge_polygons['temp_id']
+        
+        # stringify list
+        # TODO - 2022.07.21 - what is the list_clouds_per_poly is too long to fit into a field?
+        gdf_merge_polygons['las_paths'] = gdf_merge_polygons['las_paths'].astype(str)
+        
+        str_file_shp_to_write = os.path.join(str_output_dir, 'class_' + str(int_class) +'_ar_3857.shp')
+        gdf_merge_polygons.to_file(str_file_shp_to_write)
+        
+        # the geopackage does not truncate the 'las_path' field name converted from list
+        str_file_gpkg_to_write = os.path.join(str_output_dir, 'class_' + str(int_class) +'_ar_3857.gpkg')
+        gdf_merge_polygons.to_file(str_file_gpkg_to_write, driver='GPKG')
+        print("+-----------------------------------------------------------------+")
+        
+        return(True)
+    else:
+        print("+--No Classified points found--exiting---+")
+        return(False)
+        
     
 # `````````````````````````````````````````````````````````````
 

@@ -124,176 +124,182 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
         os.mkdir(str_hull_shp_dir)
         
     if int_step <= 2:
-        fn_polygonize_point_groups(str_las_from_entwine_dir,
-                                   str_hull_shp_dir,
-                                   int_class,
-                                   flt_epsilon,
-                                   int_min_samples)
+        b_clouds_found = fn_polygonize_point_groups(str_las_from_entwine_dir,
+                                                    str_hull_shp_dir,
+                                                    int_class,
+                                                    flt_epsilon,
+                                                    int_min_samples)
     # ------------------------------------------------------------------
     
-    # ---- Step 3: get OpenStreetMap Linework for roads, railraods, etc ----
-    b_simplify_graph = True # simplify the network
-    b_get_drive_service = True # get the road lines
-    b_get_railroad = True # get the rialroad lines
+    if int_step > 2:
+        b_clouds_found = True
     
-    # TODO - add buffer distance as input paramter - 20220617
-    
-    # create a folder for OpenStreetMap linework
-    str_osm_lines_shp_dir = os.path.join(str_out_arg, "03_osm_trans_lines") 
-    if not os.path.exists(str_osm_lines_shp_dir):
-        os.mkdir(str_osm_lines_shp_dir)
+    if b_clouds_found:
+        # classified point clouds found
+        # do the other steps
         
-    if int_step <= 3:
-        fn_get_osm_lines_from_shp(str_input_shp_path_arg,
-                                  str_osm_lines_shp_dir,
-                                  b_simplify_graph,
-                                  b_get_drive_service,
-                                  b_get_railroad)
-    # ------------------------------------------------------------------
-    
-    # ---- Step 4: determine the major axis for each polygon ----
-    flt_buffer_hull = 30 # distance to extend major axis beyond hull (meters)
-    
-    
-    #str_bridge_polygons_file = 'class_' + str(int_class) + '_ar_3857.shp'
-    str_bridge_polygons_file = 'class_' + str(int_class) + '_ar_3857.gpkg'
-    str_bridge_polygons_path = os.path.join(str_hull_shp_dir, str_bridge_polygons_file)
-    
-    #str_trans_line_path = str_osm_lines_shp_dir + '\\' + 'osm_trans_ln.shp'
-    str_trans_line_path = os.path.join(str_osm_lines_shp_dir, 'osm_trans_ln.shp')
-    
-    # create a folder for major axis lines
-    str_mjr_axis_shp_dir = os.path.join(str_out_arg, "04_major_axis_lines") 
-    if not os.path.exists(str_mjr_axis_shp_dir):
-        os.mkdir(str_mjr_axis_shp_dir)
+        # ---- Step 3: get OpenStreetMap Linework for roads, railraods, etc ----
+        b_simplify_graph = True # simplify the network
+        b_get_drive_service = True # get the road lines
+        b_get_railroad = True # get the rialroad lines
         
-    if int_step <= 4:
-        fn_determine_major_axis(str_bridge_polygons_path,
-                                str_trans_line_path,
-                                str_mjr_axis_shp_dir,
-                                flt_buffer_hull)
-    # ------------------------------------------------------------------
-    
-    # ---- Step 5: create DEM raster for each hull ----
-    flt_dem_resolution = 0.3 # resolution of dem in meters
-    
-    # create a folder for major axis lines
-    str_deck_dem_dir = os.path.join(str_out_arg, "05_bridge_deck_dems") 
-    if not os.path.exists(str_deck_dem_dir):
-        os.mkdir(str_deck_dem_dir)
+        # TODO - add buffer distance as input paramter - 20220617
         
-    if int_step <= 5:
-        fn_create_hull_dems(str_bridge_polygons_path,
-                            str_deck_dem_dir,
-                            flt_dem_resolution,
-                            b_is_feet)
-        '''
-        # delete the extra dems
-        fn_delete_files(str_deck_dem_dir)
-        '''
+        # create a folder for OpenStreetMap linework
+        str_osm_lines_shp_dir = os.path.join(str_out_arg, "03_osm_trans_lines") 
+        if not os.path.exists(str_osm_lines_shp_dir):
+            os.mkdir(str_osm_lines_shp_dir)
+            
+        if int_step <= 3:
+            fn_get_osm_lines_from_shp(str_input_shp_path_arg,
+                                      str_osm_lines_shp_dir,
+                                      b_simplify_graph,
+                                      b_get_drive_service,
+                                      b_get_railroad)
+        # ------------------------------------------------------------------
         
-    # --------------------------------------------------
-    
-    # ---- Step 6: flip major axis (left to right downstream) ----
-    flt_mjr_axis = 0.3 # distance to buffer major axis
-    #str_major_axis_ln_path = str_mjr_axis_shp_dir + '//' + 'mjr_axis_ln.shp'
-    str_major_axis_ln_path = os.path.join(str_mjr_axis_shp_dir, 'mjr_axis_ln.shp')
-    
-    # create a folder for major axis lines
-    str_flip_axis_dir = os.path.join(str_out_arg, "06_flipped_major_axis") 
-    if not os.path.exists(str_flip_axis_dir):
-        os.mkdir(str_flip_axis_dir)
+        # ---- Step 4: determine the major axis for each polygon ----
+        flt_buffer_hull = 30 # distance to extend major axis beyond hull (project aoi units)
         
-    if int_step <= 6:
-        fn_flip_major_axis(str_major_axis_ln_path,
-                           str_flip_axis_dir,
-                           flt_mjr_axis)
-    # --------------------------------------------------
-    
-    # ---- Step 7: assign names to major axis lines ----
-    flt_perct_on_line = 0.35 # ratio distance to create a point on major axis    
-    flt_offset  = 0.01 # distance to search around mjr axis' points for nearest osm line
-    
-    #str_mjr_axis_shp_path = str_flip_axis_dir + '\\' + 'flip_mjr_axis_ln.shp'
-    str_mjr_axis_shp_path = os.path.join(str_flip_axis_dir, 'flip_mjr_axis_ln.shp')
-    
-    # create a folder for major axis with names lines
-    str_mjr_axis_names_dir = os.path.join(str_out_arg, "07_major_axis_names") 
-    if not os.path.exists(str_mjr_axis_names_dir):
-        os.mkdir(str_mjr_axis_names_dir)
         
-    if int_step <= 7:
-        fn_assign_osm_names_major_axis(str_input_shp_path_arg,
-                                       str_mjr_axis_shp_path,
-                                       str_mjr_axis_names_dir,
-                                       flt_perct_on_line,
-                                       flt_offset)
-    # --------------------------------------------------
-    
-    # ---- Step 8: extract deck profile (plot and tabular) ----
-    flt_mjr_axis = 4 # distance to buffer major axis - lambert units - meters
-    int_resolution = 1 # requested resolution in lambert units - meters
-    flt_xs_sample_interval = 1 # interval to sample points along a line for cross section - crs units
-    
-    # create a folder for deck profile plots and tables
-    str_deck_profiles_dir = os.path.join(str_out_arg, "08_deck_profiles_NONE") 
-    if not os.path.exists(str_deck_profiles_dir):
-        os.mkdir(str_deck_profiles_dir)
-     
-    '''
-    if int_step <= 8:
-        fn_extract_deck_profile(str_mjr_axis_shp_path,
+        str_bridge_polygons_file = 'class_' + str(int_class) + '_ar_3857.gpkg'
+        str_bridge_polygons_path = os.path.join(str_hull_shp_dir, str_bridge_polygons_file)
+        
+        str_trans_line_path = os.path.join(str_osm_lines_shp_dir, 'osm_trans_ln.shp')
+        
+        # create a folder for major axis lines
+        str_mjr_axis_shp_dir = os.path.join(str_out_arg, "04_major_axis_lines") 
+        if not os.path.exists(str_mjr_axis_shp_dir):
+            os.mkdir(str_mjr_axis_shp_dir)
+            
+        if int_step <= 4:
+            fn_determine_major_axis(str_bridge_polygons_path,
+                                    str_trans_line_path,
+                                    str_mjr_axis_shp_dir,
+                                    flt_buffer_hull)
+        # ------------------------------------------------------------------
+        
+        # ---- Step 5: create DEM raster for each hull ----
+        flt_dem_resolution = 0.3 # resolution of dem in meters
+        
+        # create a folder for major axis lines
+        str_deck_dem_dir = os.path.join(str_out_arg, "05_bridge_deck_dems") 
+        if not os.path.exists(str_deck_dem_dir):
+            os.mkdir(str_deck_dem_dir)
+            
+        if int_step <= 5:
+            fn_create_hull_dems(str_bridge_polygons_path,
                                 str_deck_dem_dir,
-                                str_deck_profiles_dir,
-                                b_is_feet,
-                                flt_mjr_axis,
-                                int_resolution,
-                                flt_xs_sample_interval)
-    '''
- 
-    # --------------------------------------------------
-
-    # ---- Step 9: get bare earth terrain for each aoi polygon ----
-    int_res = 3 # resolution of the bare earth dem
-    int_buffer = 300 # buffer for each polygon (meters)
-    int_tile = 1500 # size of bare earth tile to request
-    str_field_name = ''
-    
-    # create a folder for deck profile plots and tables
-    str_bare_earth_dem_dir = os.path.join(str_out_arg, "09_bare_earth_dem") 
-    if not os.path.exists(str_bare_earth_dem_dir):
-        os.mkdir(str_bare_earth_dem_dir)
+                                flt_dem_resolution,
+                                b_is_feet)
+            '''
+            # delete the extra dems
+            fn_delete_files(str_deck_dem_dir)
+            '''
+            
+        # --------------------------------------------------
         
-    # TODO - deletion error - 2022.06.17
-
-    if int_step <= 9:
-        str_input_path_step_10 = fn_get_usgs_dem_from_shape(str_input_shp_path_arg,
-                                                            str_bare_earth_dem_dir,
-                                                            int_res,
-                                                            int_buffer,
-                                                            int_tile,
-                                                            b_is_feet,
-                                                            str_field_name)
-
-    # --------------------------------------------------
-    
-    # ---- Step 10: merge the dems (bridge and bare earth) ----
-    str_output_dem_name = ''
-    
-    str_healed_dem_dir = os.path.join(str_out_arg, "10_healed_dem") 
-    if not os.path.exists(str_healed_dem_dir):
-        os.mkdir(str_healed_dem_dir)
+        # ---- Step 6: flip major axis (left to right downstream) ----
+        flt_mjr_axis = 0.3 # distance to buffer major axis
+        str_major_axis_ln_path = os.path.join(str_mjr_axis_shp_dir, 'mjr_axis_ln.shp')
         
-    # run the first script (find_point_clouds_by_class)
-
-    if int_step <= 10:
-        fn_composite_terrain(str_input_path_step_10,
-                             str_deck_dem_dir,
-                             str_healed_dem_dir,
-                             str_output_dem_name)
-
-
-    # --------------------------------------------------
+        # create a folder for major axis lines
+        str_flip_axis_dir = os.path.join(str_out_arg, "06_flipped_major_axis") 
+        if not os.path.exists(str_flip_axis_dir):
+            os.mkdir(str_flip_axis_dir)
+            
+        if int_step <= 6:
+            fn_flip_major_axis(str_major_axis_ln_path,
+                               str_flip_axis_dir,
+                               flt_mjr_axis)
+        # --------------------------------------------------
+        
+        # ---- Step 7: assign names to major axis lines ----
+        flt_perct_on_line = 0.35 # ratio distance to create a point on major axis    
+        flt_offset  = 0.01 # distance to search around mjr axis' points for nearest osm line
+        
+        str_mjr_axis_shp_path = os.path.join(str_flip_axis_dir, 'flip_mjr_axis_ln.shp')
+        
+        # create a folder for major axis with names lines
+        str_mjr_axis_names_dir = os.path.join(str_out_arg, "07_major_axis_names") 
+        if not os.path.exists(str_mjr_axis_names_dir):
+            os.mkdir(str_mjr_axis_names_dir)
+            
+        if int_step <= 7:
+            fn_assign_osm_names_major_axis(str_input_shp_path_arg,
+                                           str_mjr_axis_shp_path,
+                                           str_mjr_axis_names_dir,
+                                           flt_perct_on_line,
+                                           flt_offset)
+        # --------------------------------------------------
+        
+        # ---- Step 8: extract deck profile (plot and tabular) ----
+        flt_mjr_axis = 4 # distance to buffer major axis - lambert units - meters
+        int_resolution = 1 # requested resolution in lambert units - meters
+        flt_xs_sample_interval = 1 # interval to sample points along a line for cross section - crs units
+        
+        # create a folder for deck profile plots and tables
+        str_deck_profiles_dir = os.path.join(str_out_arg, "08_deck_profiles_NONE") 
+        if not os.path.exists(str_deck_profiles_dir):
+            os.mkdir(str_deck_profiles_dir)
+         
+        '''
+        if int_step <= 8:
+            fn_extract_deck_profile(str_mjr_axis_shp_path,
+                                    str_deck_dem_dir,
+                                    str_deck_profiles_dir,
+                                    b_is_feet,
+                                    flt_mjr_axis,
+                                    int_resolution,
+                                    flt_xs_sample_interval)
+        '''
+     
+        # --------------------------------------------------
+    
+        # ---- Step 9: get bare earth terrain for each aoi polygon ----
+        int_res = 3 # resolution of the bare earth dem
+        int_buffer = 300 # buffer for each polygon (meters)
+        int_tile = 1500 # size of bare earth tile to request
+        str_field_name = ''
+        
+        # create a folder for deck profile plots and tables
+        str_bare_earth_dem_dir = os.path.join(str_out_arg, "09_bare_earth_dem") 
+        if not os.path.exists(str_bare_earth_dem_dir):
+            os.mkdir(str_bare_earth_dem_dir)
+            
+        # TODO - deletion error - 2022.06.17
+    
+        if int_step <= 9:
+            str_input_path_step_10 = fn_get_usgs_dem_from_shape(str_input_shp_path_arg,
+                                                                str_bare_earth_dem_dir,
+                                                                int_res,
+                                                                int_buffer,
+                                                                int_tile,
+                                                                b_is_feet,
+                                                                str_field_name)
+    
+        # --------------------------------------------------
+        
+        # ---- Step 10: merge the dems (bridge and bare earth) ----
+        str_output_dem_name = ''
+        
+        str_healed_dem_dir = os.path.join(str_out_arg, "10_healed_dem") 
+        if not os.path.exists(str_healed_dem_dir):
+            os.mkdir(str_healed_dem_dir)
+            
+        # run the first script (find_point_clouds_by_class)
+    
+        if int_step <= 10:
+            fn_composite_terrain(str_input_path_step_10,
+                                 str_deck_dem_dir,
+                                 str_healed_dem_dir,
+                                 str_output_dem_name)
+    
+    
+        # --------------------------------------------------
+        
+    else:
+        print('--- NO POINT CLOUDS FOUND ---')
     
     flt_end_run_run_tx_bridge = time.time()
     flt_time_pass_tx_bridge = (flt_end_run_run_tx_bridge - flt_start_run_tx_bridge) // 1

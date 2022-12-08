@@ -171,22 +171,31 @@ def fn_create_hull_dems(str_bridge_polygons_path,str_output_dir,flt_dem_resoluti
             with rxr.open_rasterio(str_bridge_dem, masked=True) as bridge_dem:
                 # read the DEM as a "Rioxarray"
                 #bridge_dem = rxr.open_rasterio(str_bridge_dem, masked=True).squeeze()
-        
+                
                 # get a geodataframe of just one row
                 gdf_singlerow = gdf_bridge_ar.iloc[[index],:]
         
+                # TODO - processing error - 2022.12.03 - MAC
                 # clip the DEM from points to the polygon limits
+                #clipped = bridge_dem.rio.clip(gdf_singlerow.geometry,
+                #                              gdf_singlerow.geometry.crs,
+                #                              drop=True, invert=False)
+                
                 clipped = bridge_dem.rio.clip(gdf_singlerow.geometry,
-                                              gdf_singlerow.geometry.crs,
-                                              drop=True, invert=False)
+                              drop=True, invert=False)
         
                 # fill in the missing pixels
                 filled = clipped.rio.interpolate_na()
         
                 # clip the filled-in data to the polygon boundary
+                # TODO - processing error - 2022.12.03 - MAC
+                #clipped2 = filled.rio.clip(gdf_singlerow.geometry,
+                #                           gdf_bridge_ar.geometry.crs,
+                #                           drop=True, invert=False)
+                
                 clipped2 = filled.rio.clip(gdf_singlerow.geometry,
-                                           gdf_bridge_ar.geometry.crs,
-                                           drop=True, invert=False)
+                                          drop=True, invert=False)
+                
         
                 # convert vertical values to meters
                 if b_is_feet:
