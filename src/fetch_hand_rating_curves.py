@@ -160,11 +160,13 @@ def fn_determine_segment_id(list_input_files, str_segment_field_name):
     # merge all the stream lines into one shapely object
     shp_hand_stream_merge = gdf_hand_stream_in_aoi_input_prj.geometry.unary_union
     
-    # merge all the major axis lines into one shapely oject
+    # merge all the major axis lines into one shapely object
     shp_mjr_axis_ln = gdf_mjr_axis_ln.geometry.unary_union
+    
     
     # intersect the two shapely line groups
     shp_intersection_pt = shp_hand_stream_merge.intersection(shp_mjr_axis_ln)
+    
     
     if shp_intersection_pt.geom_type == 'MultiPoint':
         gs_multipoints = gpd.GeoSeries(shp_intersection_pt)

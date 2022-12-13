@@ -30,12 +30,14 @@ from determine_major_axis import fn_determine_major_axis
 from create_hull_dem import fn_create_hull_dems
 from flip_major_axis import fn_flip_major_axis
 from assign_osm_names_major_axis import fn_assign_osm_names_major_axis
-from extract_deck_profile import fn_extract_deck_profile
+#from extract_deck_profile import fn_extract_deck_profile
+from attribute_major_axis import fn_attribute_mjr_axis
 from get_usgs_dem_from_shape import fn_get_usgs_dem_from_shape
 from composite_terrain import fn_composite_terrain
 
 import argparse
 import os
+import geopandas as gpd
 
 import time
 import datetime
@@ -63,6 +65,23 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# ````````````````````````````````````````
+def fn_filelist(source, tpl_extenstion):
+    # walk a directory and get files with suffix
+    # returns a list of file paths
+    # args:
+    #   source = path to walk
+    #   tpl_extenstion = tuple of the extensions to find (Example: (.tig, .jpg))
+    #   str_dem_path = path of the dem that needs to be converted
+    matches = []
+    for root, dirnames, filenames in os.walk(source):
+        for filename in filenames:
+            if filename.endswith(tpl_extenstion):
+                matches.append(os.path.join(root, filename))
+    return matches
+# ````````````````````````````````````````
 
 
 # --------------------------------------------------------
@@ -93,6 +112,29 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
 
     print("===================================================================")
     print(" ")
+    
+    # ---- Step 0: Save the input shapefile ----
+    if int_step <= 0:
+        str_input_shapefile_dir = os.path.join(str_out_arg, "00_input_shapefile")
+        if not os.path.exists(str_input_shapefile_dir):
+            os.mkdir(str_input_shapefile_dir)
+            
+        # find a shapefile in the str_path_to_aoi_folder and get list
+        list_shapefiles = fn_filelist(str_input_shapefile_dir, ('.SHP', '.shp'))
+        
+        # if there is no shapefile in this directory, then save out the first polygon
+        if len(list_shapefiles) <= 0:
+            # load the polygon geodataframe
+            gdf_polygons = gpd.read_file(str_input_shp_path_arg)
+            
+            # select the first polygon
+            gdf_single_poly = gdf_polygons.iloc[[0]]
+            
+            # single polygon shapefile folder
+            str_single_shape_file = os.path.join(str_input_shapefile_dir, 'input_polygon_ar.shp')
+            gdf_single_poly.to_file(str_single_shape_file)
+    # ------------------------------------------------------------------
+    
     
     # ---- Step 1: find and download point clouds by classification ----
     int_buffer = 300 # distance to buffer the input polygon (meters)
@@ -239,10 +281,12 @@ def fn_run_tx_bridge(str_input_shp_path_arg,
         flt_xs_sample_interval = 1 # interval to sample points along a line for cross section - crs units
         
         # create a folder for deck profile plots and tables
-        str_deck_profiles_dir = os.path.join(str_out_arg, "08_deck_profiles_NONE") 
+        str_deck_profiles_dir = os.path.join(str_out_arg, "08_cross_sections") 
         if not os.path.exists(str_deck_profiles_dir):
             os.mkdir(str_deck_profiles_dir)
-         
+        
+        if int_step <= 8:
+            fn_attribute_mjr_axis(str_out_arg, int_class)
         '''
         if int_step <= 8:
             fn_extract_deck_profile(str_mjr_axis_shp_path,
@@ -350,9 +394,9 @@ if __name__ == '__main__':
     
     parser.add_argument('-s',
                     dest = "int_start_step",
-                    help='OPTIONAL: starting computational step: Default=1',
+                    help='OPTIONAL: starting computational step: Default=0',
                     required=False,
-                    default=1,
+                    default=0,
                     metavar='INTEGER',
                     type=int)
     
