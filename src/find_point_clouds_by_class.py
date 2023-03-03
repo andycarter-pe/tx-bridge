@@ -160,9 +160,10 @@ def fn_determine_ept_source_per_tile(gdf_tiles):
     
     # TODO - MAC - 2022.10.11 - Need to force an overide
     
-    #str_hobu_footprints = r'D:/Texas_LiDAR_20221205/index/tx_tidar_source_ar_single_tile.geojson'
+    str_hobu_footprints = r'C:/test/eastern_tx_bridge_20230103/eastern_entwine_bridge_20230103_ar_4326.geojson'
+    #str_hobu_footprints = r'C:/test/hurricane_tx_bridge_20230103/hurricane_entwine_bridge_20230103_ar_4326.geojson'
     #str_hobu_footprints = r'D:/Llano_bridge_lidar/City_of_Llano/city_of_llano_source_ar_4326.geojson'
-    str_hobu_footprints = r'https://raw.githubusercontent.com/hobu/usgs-lidar/master/boundaries/boundaries.topojson'
+    #str_hobu_footprints = r'https://raw.githubusercontent.com/hobu/usgs-lidar/master/boundaries/boundaries.topojson'
 
     # Get EPT limits from github repository
     gdf_entwine_footprints = gpd.read_file(str_hobu_footprints)

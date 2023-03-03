@@ -72,6 +72,20 @@ def fn_get_major_axis_for_polygon(shp_bridge_ar_fn, flt_bridge_buffer_fn, gdf_tr
 
     # clip the roads/rail to the bridge lines
     gdf_current_bridge_trans_intersect = gpd.overlay(gdf_trans, gdf_current_bridge_buffer, how='intersection')
+    
+    # If intersecting road is MULTILINESTRING
+    # need to split into simple line strings
+    
+    b_have_multi = False
+    
+    for index, row in gdf_current_bridge_trans_intersect.iterrows():
+        if row['geometry'].wkt[:1] == 'M':
+            b_have_multi = True
+            #print('Multilinestring Found')
+    
+    if b_have_multi:
+        gdf_current_bridge_trans_intersect =gdf_current_bridge_trans_intersect.explode(ignore_index=True)
+        
 
     # compute a length field for each intersected and clipped line
     gdf_current_bridge_trans_intersect['length'] = gdf_current_bridge_trans_intersect['geometry'].length
@@ -165,11 +179,17 @@ def fn_determine_major_axis(str_bridge_polygons_path,str_trans_line_path,str_out
     # read the bridge polygons
     gdf_bridge_ar = gpd.read_file(str_bridge_polygons_path)
     
+    print('Reading transportation lines ...')
     # read the transporation linework
     gdf_trans = gpd.read_file(str_trans_line_path)
     
     # set the crs of the gdf_bridge_ar
     gdf_bridge_ar = gdf_bridge_ar.to_crs(gdf_trans.crs)
+    
+    # Added - MAC - 2023.02.28
+    # filter to only the trans lines that intersect the bridge polygons
+    print('Determining transportation lines that have bridges ...')
+    gdf_trans_with_bridges = gpd.sjoin(gdf_trans, gdf_bridge_ar)
     
     # get the major axis for each polygon in the provided hulls
     list_major_axis_shp = []
@@ -183,7 +203,7 @@ def fn_determine_major_axis(str_bridge_polygons_path,str_trans_line_path,str_out
         shp_bridge_ar = row['geometry']
         sleep(0)
         
-        shp_major_axis = fn_get_major_axis_for_polygon(shp_bridge_ar, flt_buffer_hull, gdf_trans)
+        shp_major_axis = fn_get_major_axis_for_polygon(shp_bridge_ar, flt_buffer_hull, gdf_trans_with_bridges)
         list_major_axis_shp.append(shp_major_axis)
 
     # add the major axis linestrings to the geodataframe

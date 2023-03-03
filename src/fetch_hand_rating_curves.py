@@ -167,8 +167,9 @@ def fn_determine_segment_id(list_input_files, str_segment_field_name):
     # intersect the two shapely line groups
     shp_intersection_pt = shp_hand_stream_merge.intersection(shp_mjr_axis_ln)
     
+    b_have_points = False
     
-    if shp_intersection_pt.geom_type == 'MultiPoint':
+    if shp_intersection_pt.geom_type == 'MultiPoint' or shp_intersection_pt.geom_type == 'Point':
         gs_multipoints = gpd.GeoSeries(shp_intersection_pt)
         gs_points = gs_multipoints.explode(index_parts=False)
         
@@ -177,116 +178,147 @@ def fn_determine_segment_id(list_input_files, str_segment_field_name):
         
         # need to reindex the returned geoDataFrame
         gdf_points = gdf_points.reset_index(drop=True)
-        
+        b_have_points = True
+    
     # buffer to get stream attributes on points
     gdf_hand_stream_in_aoi_input_prj_buffer = gdf_hand_stream_in_aoi_input_prj.copy()
     gdf_hand_stream_in_aoi_input_prj_buffer['geometry'] = gdf_hand_stream_in_aoi_input_prj_buffer.geometry.buffer(0.1)
     
-    # Spatial join of the points and buffered stream
-    gdf_intersection_points_feature_id = gpd.sjoin(
-        gdf_points,
-        gdf_hand_stream_in_aoi_input_prj_buffer,
-        how='left',
-        op='intersects')
-    
-    # delete index_right
-    del gdf_intersection_points_feature_id['index_right']
-    
-    
-    # buffer the major axis lines to get attributes on points
-    gdf_mjr_axis_ln_buffer = gdf_mjr_axis_ln.copy()
-    gdf_mjr_axis_ln_buffer['geometry'] = gdf_mjr_axis_ln_buffer.geometry.buffer(0.1)
-    
-    # Spatial join the 'feature_id' attributed streams points with the buffers major axis
-    gdf_intersection_points_major_axis = gpd.sjoin(
-        gdf_intersection_points_feature_id,
-        gdf_mjr_axis_ln_buffer,
-        how='left',
-        op='intersects')
-    
-    # delete index_right
-    del gdf_intersection_points_major_axis['index_right']
-    # ------
-    
-    
-    # ---- determine major axis lines with two or more stream points ----
-    # it doen't happen often, but it can happen
-    gdf_duplicates = gdf_intersection_points_major_axis[gdf_intersection_points_major_axis.duplicated(subset=['uuid'], keep=False)]
-    
-    if len(gdf_duplicates) > 1:
-        # there should be at least two rows
+    if b_have_points:
+        # Spatial join of the points and buffered stream
+        gdf_intersection_points_feature_id = gpd.sjoin(
+            gdf_points,
+            gdf_hand_stream_in_aoi_input_prj_buffer,
+            how='left',
+            op='intersects')
         
-        # get a list of unique uuid of the duplicates
-        arr_unique_uuid_duplicates = gdf_duplicates.uuid.unique()
+        # delete index_right
+        del gdf_intersection_points_feature_id['index_right']
         
-        list_index_to_keep = []
-    
-        for x in arr_unique_uuid_duplicates:
-            # dataframe of just the matching rows
-            gdf_matching = gdf_duplicates.loc[gdf_duplicates['uuid'] == x]
-    
-            # determine the highest stream order
-            # if stream orders are all the same... it just picks the first value
-            # TODO - 2022.10.07 - Do we want the biggest drainage area?
-            max_index = gdf_matching['order__right'].idxmax()
-    
-            list_index_to_keep.append(max_index)
-    
-        # list of all the gdf_duplicates indecies
-        list_all_index = gdf_duplicates.index.tolist()
-    
-        # create a list of indecies to remove from gdf_intersection_points_major_axis
-        list_index_to_drop = np.setdiff1d(list_all_index,list_index_to_keep).tolist()
         
-        # remove the duplicates on gdf_intersection_points_major_axis 
-        gdf_intersection_points_major_axis = gdf_intersection_points_major_axis.drop(index=list_index_to_drop)
+        # buffer the major axis lines to get attributes on points
+        gdf_mjr_axis_ln_buffer = gdf_mjr_axis_ln.copy()
+        gdf_mjr_axis_ln_buffer['geometry'] = gdf_mjr_axis_ln_buffer.geometry.buffer(0.1)
         
-        print(str(len(list_index_to_drop)) + " duplicate stream crossings removed.")
-    # --------
-    
-    # create a dist_river coloumn in gdf_intersection_points_major_axis and set to '0'
-    # because the major axis line intersects a stream segement line (at least once)
-    gdf_intersection_points_major_axis['dst_new_rv'] = 0
-    
-    # left join the major axis lines with points to get str_segment_field_name and order on lines
-
-    gdf_stream_merge_crossing = gdf_mjr_axis_ln.merge(gdf_intersection_points_major_axis[[str_segment_field_name ,
-                                                                                          'order__left',
-                                                                                          'dst_new_rv',
-                                                                                          'feature_id_right',
-                                                                                          'uuid']],
-                                               on='uuid',
-                                               how='left')
-    
-    # dataframe where a str_segment_field_name was assigned -- str_segment_field_name is not null
-    gdf_crosses_stream = gdf_stream_merge_crossing[gdf_stream_merge_crossing[str_segment_field_name ].notna()]
-    
-    # dataframe where a str_segment_field_name was not assigned -- str_segment_field_name is null
-    gdf_find_nearest_stream = gdf_stream_merge_crossing[gdf_stream_merge_crossing[str_segment_field_name ].isna()]
-    
-    # --- when a major axis line does not intersect a stream line
-    # if no match found, search for the nearest stream and populate str_segment_field_name and search distance
-
-    for index, row in gdf_find_nearest_stream.iterrows():
-        # get the the nearest stream in gdf_stream_in_aoi_prj
-        pd_dist_to_nearest_stream = gdf_hand_stream_in_aoi_input_prj.distance(row['geometry']).sort_values()
+        # Spatial join the 'feature_id' attributed streams points with the buffers major axis
+        gdf_intersection_points_major_axis = gpd.sjoin(
+            gdf_intersection_points_feature_id,
+            gdf_mjr_axis_ln_buffer,
+            how='left',
+            op='intersects')
         
-        # distance to nearest stream
-        flt_nearest_stream_dist = pd_dist_to_nearest_stream.iloc[0]
+        # delete index_right
+        del gdf_intersection_points_major_axis['index_right']
+        # ------
         
-        # index in gdf_stream_in_aoi_prj of nearest stream
-        int_nearest_stream_index = gdf_hand_stream_in_aoi_input_prj.distance(row['geometry']).sort_values().index[0]
         
-        # append gdf_mjr_axis_ln with the 'feature_id', 'order_' and 'dist_river' of the nearest stream line
+        # ---- determine major axis lines with two or more stream points ----
+        # it doen't happen often, but it can happen
+        gdf_duplicates = gdf_intersection_points_major_axis[gdf_intersection_points_major_axis.duplicated(subset=['uuid'], keep=False)]
         
-        gdf_find_nearest_stream.at[index, str_segment_field_name ] = gdf_hand_stream_in_aoi_input_prj.loc[int_nearest_stream_index][str_segment_field_name]
-        gdf_find_nearest_stream.at[index, 'order__left'] = gdf_hand_stream_in_aoi_input_prj.loc[int_nearest_stream_index]['order_']
-        gdf_find_nearest_stream.at[index, 'dst_new_rv'] = round(flt_nearest_stream_dist, 2)
-        gdf_find_nearest_stream.at[index, 'feature_id_right'] = gdf_hand_stream_in_aoi_input_prj.loc[int_nearest_stream_index]['feature_id']
+        if len(gdf_duplicates) > 1:
+            # there should be at least two rows
+            
+            # get a list of unique uuid of the duplicates
+            arr_unique_uuid_duplicates = gdf_duplicates.uuid.unique()
+            
+            list_index_to_keep = []
         
-    # combine the gdf_find_nearest_stream and gdf_crosses_stream
-    gdf_mjr_axis_ln_attributed = pd.concat([gdf_find_nearest_stream, gdf_crosses_stream])
+            for x in arr_unique_uuid_duplicates:
+                # dataframe of just the matching rows
+                gdf_matching = gdf_duplicates.loc[gdf_duplicates['uuid'] == x]
+        
+                # determine the highest stream order
+                # if stream orders are all the same... it just picks the first value
+                # TODO - 2022.10.07 - Do we want the biggest drainage area?
+                max_index = gdf_matching['order__right'].idxmax()
+        
+                list_index_to_keep.append(max_index)
+        
+            # list of all the gdf_duplicates indecies
+            list_all_index = gdf_duplicates.index.tolist()
+        
+            # create a list of indecies to remove from gdf_intersection_points_major_axis
+            list_index_to_drop = np.setdiff1d(list_all_index,list_index_to_keep).tolist()
+            
+            # remove the duplicates on gdf_intersection_points_major_axis 
+            gdf_intersection_points_major_axis = gdf_intersection_points_major_axis.drop(index=list_index_to_drop)
+            
+            print(str(len(list_index_to_drop)) + " duplicate stream crossings removed.")
+        # --------
+        
+        # create a dist_river coloumn in gdf_intersection_points_major_axis and set to '0'
+        # because the major axis line intersects a stream segement line (at least once)
+        gdf_intersection_points_major_axis['dst_new_rv'] = 0
+        
+        # left join the major axis lines with points to get str_segment_field_name and order on lines
     
+        gdf_stream_merge_crossing = gdf_mjr_axis_ln.merge(gdf_intersection_points_major_axis[[str_segment_field_name ,
+                                                                                              'order__left',
+                                                                                              'dst_new_rv',
+                                                                                              'feature_id_right',
+                                                                                              'uuid']],
+                                                   on='uuid',
+                                                   how='left')
+        
+        # dataframe where a str_segment_field_name was assigned -- str_segment_field_name is not null
+        gdf_crosses_stream = gdf_stream_merge_crossing[gdf_stream_merge_crossing[str_segment_field_name ].notna()]
+        
+        # dataframe where a str_segment_field_name was not assigned -- str_segment_field_name is null
+        gdf_find_nearest_stream = gdf_stream_merge_crossing[gdf_stream_merge_crossing[str_segment_field_name ].isna()]
+        
+        # --- when a major axis line does not intersect a stream line
+        # if no match found, search for the nearest stream and populate str_segment_field_name and search distance
+    
+        for index, row in gdf_find_nearest_stream.iterrows():
+            # get the the nearest stream in gdf_stream_in_aoi_prj
+            pd_dist_to_nearest_stream = gdf_hand_stream_in_aoi_input_prj.distance(row['geometry']).sort_values()
+            
+            # distance to nearest stream
+            flt_nearest_stream_dist = pd_dist_to_nearest_stream.iloc[0]
+            
+            # index in gdf_stream_in_aoi_prj of nearest stream
+            int_nearest_stream_index = gdf_hand_stream_in_aoi_input_prj.distance(row['geometry']).sort_values().index[0]
+            
+            # append gdf_mjr_axis_ln with the 'feature_id', 'order_' and 'dist_river' of the nearest stream line
+            
+            gdf_find_nearest_stream.at[index, str_segment_field_name ] = gdf_hand_stream_in_aoi_input_prj.loc[int_nearest_stream_index][str_segment_field_name]
+            gdf_find_nearest_stream.at[index, 'order__left'] = gdf_hand_stream_in_aoi_input_prj.loc[int_nearest_stream_index]['order_']
+            gdf_find_nearest_stream.at[index, 'dst_new_rv'] = round(flt_nearest_stream_dist, 2)
+            gdf_find_nearest_stream.at[index, 'feature_id_right'] = gdf_hand_stream_in_aoi_input_prj.loc[int_nearest_stream_index]['feature_id']
+            
+        # combine the gdf_find_nearest_stream and gdf_crosses_stream
+        gdf_mjr_axis_ln_attributed = pd.concat([gdf_find_nearest_stream, gdf_crosses_stream])
+    
+    else:
+        # no intersecting points were found
+        print('No Intersection of segment and major axis lines found...')
+        print('Determining nearest segment...')
+        gdf_mjr_axis_ln_attributed = gdf_mjr_axis_ln.copy()
+        
+        # create empty coloumns
+        gdf_mjr_axis_ln_attributed[str_segment_field_name] = ''
+        gdf_mjr_axis_ln_attributed['dst_new_rv'] = 0
+        gdf_mjr_axis_ln_attributed['feature_id_right'] = ''
+        
+        
+        for index, row in gdf_mjr_axis_ln_attributed.iterrows():
+            # get the the nearest stream in gdf_stream_in_aoi_prj
+            pd_dist_to_nearest_stream = gdf_hand_stream_in_aoi_input_prj.distance(row['geometry']).sort_values()
+            
+            # distance to nearest stream
+            flt_nearest_stream_dist = pd_dist_to_nearest_stream.iloc[0]
+            
+            # index in gdf_stream_in_aoi_prj of nearest stream
+            int_nearest_stream_index = gdf_hand_stream_in_aoi_input_prj.distance(row['geometry']).sort_values().index[0]
+            
+            # append gdf_mjr_axis_ln with the 'feature_id', 'order_' and 'dist_river' of the nearest stream line
+            
+            gdf_mjr_axis_ln_attributed.at[index, str_segment_field_name] = gdf_hand_stream_in_aoi_input_prj.loc[int_nearest_stream_index][str_segment_field_name]
+            gdf_mjr_axis_ln_attributed.at[index, 'dist_river'] = round(flt_nearest_stream_dist, 2)
+            gdf_mjr_axis_ln_attributed.at[index, 'feature_id_right'] = gdf_hand_stream_in_aoi_input_prj.loc[int_nearest_stream_index]['feature_id']
+            
+            
     # convert 'feature_id' to integer
     gdf_mjr_axis_ln_attributed['feature_id_right'] = gdf_mjr_axis_ln_attributed['feature_id_right'].astype(int)
     

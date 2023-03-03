@@ -92,6 +92,9 @@ def fn_get_osm_lines_from_shp(str_input_path,str_output_dir,b_simplify_graph,b_g
     # read the "area of interest" shapefile in to geopandas dataframe
     gdf_aoi_prj = gpd.read_file(str_input_path)
     
+    # buffer the gdf_aoi_prj
+    gdf_aoi_prj = gdf_aoi_prj.buffer(10000)
+    
     # convert aoi to wgs
     gdf_aoi_wgs = gdf_aoi_prj.to_crs(wgs)
     
@@ -181,8 +184,13 @@ def fn_get_osm_lines_from_shp(str_input_path,str_output_dir,b_simplify_graph,b_g
         b_file_to_create = True
     
     if b_file_to_create:
+        if 'name' not in gdf_trans_edge.columns:
+            gdf_trans_edge['name'] = ''
+            
         # sample to the selected coloumns
         gdf_edges_mod = gdf_trans_edge[['u','v', 'osmid', 'name','geometry']]
+            
+        gdf_edges_mod['name'] = gdf_edges_mod['name'].astype(str)
         
         # convert coloumns to string (to stringify lists)
         gdf_edges_mod['osmid'] = gdf_edges_mod['osmid'].astype(str)

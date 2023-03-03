@@ -46,7 +46,7 @@ def fn_assign_osm_names_major_axis(str_aoi_shp_path,str_mjr_axis_shp_path,str_ou
     
     print(" ")
     print("+=================================================================+")
-    print("|          ASSIGN OPENSTEETMAP NAMES TO MAJOR AXIS LINES          |")
+    print("|          ASSIGN OPENSTREETMAP NAMES TO MAJOR AXIS LINES         |")
     print("|                Created by Andy Carter, PE of                    |")
     print("|             Center for Water and the Environment                |")
     print("|                 University of Texas at Austin                   |")
@@ -67,6 +67,9 @@ def fn_assign_osm_names_major_axis(str_aoi_shp_path,str_mjr_axis_shp_path,str_ou
     
     # read the "area of interest" shapefile in to geopandas dataframe
     gdf_aoi_prj = gpd.read_file(str_aoi_shp_path)
+    
+    # buffer the gdf_aoi_prj
+    gdf_aoi_prj = gdf_aoi_prj.buffer(10000)
     
     # convert "area of interest" to wgs
     gdf_aoi_wgs = gdf_aoi_prj.to_crs(wgs)
@@ -140,6 +143,11 @@ def fn_assign_osm_names_major_axis(str_aoi_shp_path,str_mjr_axis_shp_path,str_ou
         gdf_edges_road_rail = gdf_edges
 
     if b_got_rail or b_got_drive:
+        
+        # add name field if needed
+        if 'name' not in gdf_edges_road_rail:
+            gdf_edges_road_rail['name'] = ''
+        
         # --- get major axis names ---
         print('Getting major axis names...')
         

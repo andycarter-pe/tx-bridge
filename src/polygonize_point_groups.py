@@ -18,6 +18,8 @@ import geopandas as gpd
 
 import os
 
+import shapely.geometry.multipolygon as sh
+
 import multiprocessing as mp
 import tqdm
 from time import sleep
@@ -212,38 +214,60 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
         
         # combine all the returned geodataframes
         gdf_hulls = pd.concat(list_gdf_hulls, ignore_index=True)
-        
+
         # set a projection
         gdf_hulls = gdf_hulls.set_crs(str_lambert)
         
-        # merging the overlapping polygons - polygons span multiple tiles
-        # create a union of all the hulls
-        gdf_hulls_merge = gdf_hulls.unary_union
         
-        # convert the union hulls to geodataframe
-        gdf_merge_polygons = gpd.GeoDataFrame([polygon for polygon in gdf_hulls_merge]).set_geometry(0)
-        
-        gdf_merge_polygons.rename_geometry('geometry', inplace=True)
-        
-        gdf_merge_polygons = gdf_merge_polygons.set_crs(str_lambert)
-        
-        # add a interim bridge id number to determine intersecting tiles
-        gdf_merge_polygons.insert(0, 'temp_id', range(0, 0 + len(gdf_merge_polygons)))
-        
+        if len(gdf_hulls) > 1:
+            # merging the overlapping polygons - polygons span multiple tiles
+            # create a union of all the hulls
+            gdf_hulls_merge = gdf_hulls.unary_union
+            
+
+            if (isinstance(gdf_hulls_merge, sh.MultiPolygon)):
+                gdf_merge_polygons = gpd.GeoDataFrame([polygon for polygon in gdf_hulls_merge]).set_geometry(0)
+                gdf_merge_polygons.rename_geometry('geometry', inplace=True)
+            else:
+                gdf_merge_polygons = gpd.GeoDataFrame(geometry=[gdf_hulls_merge])
+            
+            gdf_merge_polygons = gdf_merge_polygons.set_crs(str_lambert)
+            
+            # add a interim bridge id number to determine intersecting tiles
+            gdf_merge_polygons.insert(0, 'temp_id', range(0, 0 + len(gdf_merge_polygons)))
+        else:
+            # only one polygon found
+            gdf_merge_polygons = gdf_hulls
+            gdf_merge_polygons['temp_id'] = 0
+
         # intersect the polygons
         gdf_intersection = gdf_merge_polygons.overlay(gdf_hulls, how='intersection')
-        
+
+    
         list_clouds_per_poly = []
         
-        for i in range(0, 0 + len(gdf_merge_polygons)):
-            # get all the rows that match the temp_id
-            gdf_current_poly = gdf_intersection.loc[gdf_intersection['temp_id'] == i]
-            
-            #TODO - need to check if no tiles returned - 2022.04.27
-            
+        if len(gdf_hulls) > 1:
+            for i in range(0, 0 + len(gdf_merge_polygons)):
+                # get all the rows that match the temp_id
+                gdf_current_poly = gdf_intersection.loc[gdf_intersection['temp_id'] == i]
+                
+                #TODO - need to check if no tiles returned - 2022.04.27
+                
+                # convert the coloumn to list
+                list_tiles = gdf_current_poly['las_path'].tolist()
+                
+                list_clouds_per_poly.append(list_tiles)
+        else:
+            # temp_id is one only
+            gdf_current_poly = gdf_merge_polygons.loc[0]
+                
             # convert the coloumn to list
-            list_tiles = gdf_current_poly['las_path'].tolist()
-            
+            try:
+                list_tiles = gdf_current_poly['las_path'].tolist()
+                list_clouds_per_poly.append(list_tiles)
+            except:
+                list_tiles = [gdf_current_poly['las_path']]
+                
             list_clouds_per_poly.append(list_tiles)
             
         # add the 'list_clouds_per_poly' as new coloumn to gdf_merge_polygons
@@ -253,7 +277,7 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
         del gdf_merge_polygons['temp_id']
         
         # stringify list
-        # TODO - 2022.07.21 - what is the list_clouds_per_poly is too long to fit into a field?
+        # TODO - 2022.07.21 - what if the list_clouds_per_poly is too long to fit into a field?
         gdf_merge_polygons['las_paths'] = gdf_merge_polygons['las_paths'].astype(str)
         
         str_file_shp_to_write = os.path.join(str_output_dir, 'class_' + str(int_class) +'_ar_3857.shp')

@@ -359,8 +359,11 @@ def fn_get_usgs_dem_from_shape(str_input_path,
         list_str_url = []
         list_str_tile_name = []
     
-        str_URL_header = r'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WCSServer?'
-        str_URL_query_1 = r'SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&coverage=DEP3Elevation&CRS=EPSG:3857&FORMAT=GeoTiff'
+        #str_URL_header = r'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WCSServer?'
+        str_URL_header = r'http://localhost:8080/geoserver/fathom/wcs?'
+        # note that the coverage is 'cog'
+        # note that format = 'geotiff' - all lower case
+        str_URL_query_1 = r'SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&coverage=cog&CRS=EPSG:3857&FORMAT=geotiff'
     
         for index, row in gdf_tiles_intersect_only.iterrows():
             list_str_tile_name.append(gdf_tiles_intersect_only['tile_name'][index])
@@ -374,8 +377,7 @@ def fn_get_usgs_dem_from_shape(str_input_path,
             str_bbox = str(b_tile[0]) + "," + str(b_tile[1]) + "," + str(b_tile[2]) + "," + str(b_tile[3])
     
             str_URL_query_bbox = "&BBOX=" + str_bbox
-            str_URL_query_dim = "&WIDTH=" + str(INT_TILE_X/INT_RESOLUTION) + "&HEIGHT=" + str(INT_TILE_Y/INT_RESOLUTION)
-            #str_URL_query_dim = "&WIDTH=" + str(int(INT_TILE_X/INT_RESOLUTION)) + "&HEIGHT=" + str(int(INT_TILE_Y/INT_RESOLUTION))
+            str_URL_query_dim = "&WIDTH=" + str(int(INT_TILE_X/INT_RESOLUTION)) + "&HEIGHT=" + str(int(INT_TILE_Y/INT_RESOLUTION))
     
             str_url = str_URL_header + str_URL_query_1 + str_URL_query_bbox + str_URL_query_dim
             list_str_url.append(str_url)

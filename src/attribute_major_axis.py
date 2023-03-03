@@ -196,11 +196,19 @@ def fn_get_ground_dem_from_usgs_service(shp_mjr_axis_ar_buffer_lambert, b_is_fee
 
     str_URL_header = r'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WCSServer?'
     str_URL_query_1 = r'SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&coverage=DEP3Elevation&CRS=EPSG:3857&FORMAT=GeoTiff'
+    
+    # TODO - this is an override to use local WCS with geoserver - 2022.12.29
+    # note that the coverage is 'cog'
+    # note that format = 'geotiff' - all lower case
+    #str_URL_header = r'http://localhost:8080/geoserver/fathom/wcs?'
+    #str_URL_query_1 = r'SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&coverage=cog&CRS=EPSG:3857&FORMAT=geotiff'
 
     str_bbox = str(list_int_b[0]) + "," + str(list_int_b[1]) + "," + str(list_int_b[2]) + "," + str(list_int_b[3])
 
     str_URL_query_bbox = "&BBOX=" + str_bbox
     str_URL_query_dim = "&WIDTH=" + str(int_tile_x/int_resolution) + "&HEIGHT=" + str(int_tile_y/int_resolution)
+    # note - local WCS requires integer
+    #str_URL_query_dim = "&WIDTH=" + str(int(int_tile_x/int_resolution)) + "&HEIGHT=" + str(int(int_tile_y/int_resolution))
 
     str_url = str_URL_header + str_URL_query_1 + str_URL_query_bbox + str_URL_query_dim
 
@@ -400,7 +408,7 @@ def fn_attribute_mjr_axis(str_input_dir, int_class):
             gdf_appended_pts = gdf_mjr_axis_mid_pt.copy()
             gdf_appended_pts = gdf_appended_pts[0:0]
             
-            # if point in center of linestring is not inside theaoi polygon drop the row from the merged list
+            # if point in center of linestring is not inside the aoi polygon, drop the row from the merged list
             # pick the first polygon
             shp_aoi_poly = gdf_area_of_interest.iloc[0]['geometry']
             
@@ -436,6 +444,7 @@ def fn_attribute_mjr_axis(str_input_dir, int_class):
             arr_unique_files = gdf_appended_ln.file_path.unique()
             
             for item in arr_unique_files:
+                
                 # select a dataframe of just the rows that have matching filename
                 gdf_mjr_axis_per_file = gdf_appended_ln.query("file_path==@item")
                 
@@ -491,6 +500,9 @@ def fn_attribute_mjr_axis(str_input_dir, int_class):
 
             int_count = 0
             l = len(gdf_appended_ln_w_hull_id)
+            
+            # TODO - 20221213 - Error when l = 0
+
             str_prefix = "Profile " + str(int_count) + ' of ' + str(l)
             fn_print_progress_bar(0, l, prefix = str_prefix , suffix = 'Complete', length = 29)
 
@@ -607,7 +619,7 @@ def fn_attribute_mjr_axis(str_input_dir, int_class):
             # add the hull geometry to the record
             fn_add_hull_geometry(str_input_dir, int_class)
             
-            # add the hand rating curves to each bridge
+            # add the HAND rating curves to each bridge
             fn_fetch_hand_rating_curves(str_input_dir, str_input_hand_data_dir, str_segment_field_name)
             
             
