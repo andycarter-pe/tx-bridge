@@ -1,0 +1,14 @@
+{
+    "str_aoi_shp_filepath": "/work2/08140/acarter/stampede2/tx_bridge_20230901/aoi_huc_8_stateplane/input_huc_12070205_ar_2277.gpkg",
+    "str_aoi_name": "run_127_HUC_12070205_collection_032",
+    "str_output_folder": "/work2/08140/acarter/stampede2/tx_bridge_20230901/output/127_12070205_032",
+    "b_is_feet": true,
+    "str_cog_dem_path": "/work2/08140/acarter/stampede2/tx_bridge_20230901/rtree/032/rtree_file_3857",
+    "copc_point_cloud": {
+        "copc_name": "city_of_georgetown",
+        "copc_date": 20150803,
+        "copc_short_name": "032",
+        "copc_filepath": "/work2/08140/acarter/stampede2/tx_bridge_20230901/bridge_copc/032_bridge_merge.copc.laz",
+        "copc_class": 13
+    }
+}
