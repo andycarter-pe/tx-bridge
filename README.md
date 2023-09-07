@@ -1,5 +1,5 @@
 # TX-BRIDGE <img src="https://github.com/andycarter-pe/tx-bridge/blob/dev/doc/Logo_CWE_TxDOT.png" align="right" alt="tx-bridge agency" height="80"> <br> <br>
-## <i>Geospatial extraction of bridge data from USGS Entwine point clouds </i>
+## <i>"hpc-run" branch - Geospatial extraction of bridge data from USGS Entwine point clouds </i>
 
 <img src="https://github.com/andycarter-pe/tx-bridge/blob/dev/doc/tx-bridge-logo-20220517.png" align="right"
      alt="tx-bridge logo" width="160" height="160">
