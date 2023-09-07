@@ -4,8 +4,8 @@
 <img src="https://github.com/andycarter-pe/tx-bridge/blob/dev/doc/tx-bridge-logo-20220517.png" align="right"
      alt="tx-bridge logo" width="160" height="160">
 
-**Description**:  From entwine point cloud data served by the USGS 3DEP service, extract geospatial data from points classified as bridges over a requested goegraphical area.  These scripts were developed to get bridge limits such that they can be used to build a terrain that is a composite of the 'bare-earth' and the bridge deck data (healed terrain).  As a flood mapping surface, this 'healed surface would be used to determine when bridges are overtopped during a flood.
+**Description**:  Using locally staged bare earth digital elevation model (DEM) terrain and classified cloud optimized point clouds (CPOC), extract all the “bridge envelopes” from the staged LiDAR collections.  For example, if we desire to get polygon and cross section of all the bridges within the City of San Antonio, this routine extracts all the bridges. … more to come … 2023.09.07
 
-  - **Technology stack**: Scripts were all developed in Python 3.8.12.  Use is intended within a custom 'tx-bridge' [Anaconda environment](https://www.anaconda.com/products/individual).  <br><br>
+  - **Technology stack**: Scripts were all developed in Python 3.11.5.  Use is intended within a custom docker image.  https://hub.docker.com/r/civileng127/tx-bridge/tags <br><br>
   - **Status**:  Version 0.1- Preliminary release.  Refer to to the [CHANGELOG](CHANGELOG.md).<br><br>
-  - **Overview Video**: [Link to overview video of tx-bridge](https://www.youtube.com/watch?v=xxxxxxxxxxxxxxxxxx)<br><br>
+  - **Overview Video**: [Link to overview video of tx-bridge](https://www.youtube.com/watch?v=xxxxxxxxxxxxxxxxxx) -- not yet available<br><br>
