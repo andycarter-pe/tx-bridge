@@ -1,0 +1,7 @@
+# requirements.txt
+python-pdal
+geopandas
+osmnx
+rioxarray
+simplekml
+dask
