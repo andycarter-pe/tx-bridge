@@ -1,5 +1,5 @@
 # In the folder containing this Dockerfile, run the following command
-# docker build -t test-tx-bridge:20230907 .
+# docker build -t civileng127/tx-bridge:20230911 .
 
 # Use continuumio/miniconda3 as a parent image
 FROM continuumio/miniconda3

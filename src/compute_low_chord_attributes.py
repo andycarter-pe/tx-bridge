@@ -535,7 +535,7 @@ if __name__ == '__main__':
 
     flt_start_run = time.time()
     
-    parser = argparse.ArgumentParser(description='================= COMPUTE LOW CHORD ATTRIBUTES ===================')
+    parser = argparse.ArgumentParser(description='================= COMPUTE LOW CHORD ATTRIBUTES (2023.09.11) ===================')
     
     parser.add_argument('-i',
                         dest = "str_input_dir",
