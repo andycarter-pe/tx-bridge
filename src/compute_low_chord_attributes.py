@@ -6,7 +6,7 @@
 #
 # Created by: Andy Carter, PE
 # Created - 2022.11.09
-# Last revised - 2022.11.09
+# Last revised - 2023.09.11
 #
 # tx-bridge - sub-process of the 8th processing script
 # Uses the 'pdal' conda environment
@@ -267,6 +267,74 @@ def fn_fix_deck_right_abut(df_deck, flt_tolerance, list_end_index):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+# ...................................................
+def fn_fix_ground_nulls(gdf):
+
+    # added 2023.09.11
+    
+    # Create an empty list to store rows with malformed values
+    list_malformed_rows = []
+    int_count_bad = 0
+
+    # determine the number of malformed ground profiles
+    for index, row in gdf.iterrows():
+        ground_elv = row['ground_elv']
+        try:
+            ast.literal_eval(ground_elv)
+        except (ValueError, SyntaxError):
+            # If ast.literal_eval raises an exception, add the row to the list
+            list_malformed_rows.append(index)
+            int_count_bad += 1
+
+    if len(list_malformed_rows) > 0:
+        # correct the ground profile data
+        print("+-----------------------------------------------------------------+")
+        print('Fixing ground profiles: ' + str(len(list_malformed_rows)))
+        
+        for bad_index in list_malformed_rows:
+
+            input_str = gdf.loc[bad_index]['ground_elv']
+
+            # Remove brackets and split the string by ','
+            values_str = input_str.strip('[]').split(',')
+
+            # Convert values to floats, handling 'nan' as np.nan
+            values = [float(val.strip()) if val.strip().lower() != 'nan' else np.nan for val in values_str]
+
+            # Find the indices of 'nan' values
+            nan_indices = [i for i, val in enumerate(values) if np.isnan(val)]
+
+            # Replace 'nan' values with interpolated values
+            for nan_index in nan_indices:
+                # Find the nearest non-'nan' values before and after the current 'nan' value
+                prev_index = nan_index
+                while np.isnan(values[prev_index]):
+                    prev_index -= 1
+                next_index = nan_index
+                while np.isnan(values[next_index]):
+                    next_index += 1
+
+                # Linear interpolation
+                interpolated_value = np.interp(nan_index, [prev_index, next_index], [values[prev_index], values[next_index]])
+
+                # Round the interpolated value to two decimal places
+                interpolated_value = round(interpolated_value, 2)
+
+                # Update the 'nan' value with the interpolated value
+                values[nan_index] = interpolated_value
+
+            # Convert the updated list of values back to a string
+            updated_values_str = [str(val) for val in values]
+            updated_str = '[' + ', '.join(updated_values_str) + ']'
+
+            gdf.at[bad_index, 'ground_elv'] = updated_str
+        return(gdf)
+    else:
+        # return the original geodataframe
+        return(gdf)
+# ...................................................    
+
+
 # ---------------------------------------------------
 def fn_compute_low_chord_attributes(str_input_dir):
     
@@ -279,10 +347,13 @@ def fn_compute_low_chord_attributes(str_input_dir):
     if os.path.exists(str_path_to_mjr_axis_gpkg):
         # file is found
         
+        gdf_mjr_read = gpd.read_file(str_path_to_mjr_axis_gpkg)
+        
+        # Fix nulls in ground elevation lists - 2023.09.11
+        gdf_mjr = fn_fix_ground_nulls(gdf_mjr_read)
+        
         print("+-----------------------------------------------------------------+")
         print("Calculating low chord...")
-        
-        gdf_mjr = gpd.read_file(str_path_to_mjr_axis_gpkg)
         
         gdf_mjr['low_ch_elv'] = '' # string list of low chord elevations
         gdf_mjr['convey_ar'] = '' # conveyance area below the low chord
@@ -303,6 +374,11 @@ def fn_compute_low_chord_attributes(str_input_dir):
             
             # note: ast.literal_eval(row['sta']) - converts string to list
             # create a pandas dataframe
+            
+            # Fixed 2023.09.11 - Ground elevation may contain nan
+            
+            
+
             df_bridge = pd.DataFrame(list(zip(ast.literal_eval(row['sta']),
                                               ast.literal_eval(row['ground_elv']),
                                               ast.literal_eval(row['deck_elev'])
@@ -448,8 +524,6 @@ def fn_compute_low_chord_attributes(str_input_dir):
         gdf_mjr.to_file(str_major_axis_xs_file, driver='GPKG')
         
         print("+-----------------------------------------------------------------+")
-        # TODO - Compute latitude, longitude and hull_wkt
-            
             
     else:
         print("  ERROR: Required File Not Found: " + str_path_to_mjr_axis_gpkg)

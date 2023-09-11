@@ -230,6 +230,9 @@ def fn_fix_convex_hulls(str_convex_hull_filepath,str_input_json,dict_global_conf
         shp_largest_polygon, flt_largest_area = fn_find_largest_polygon(shp_geometries)
         
         # Create a new polygon using the exterior ring
+        # TODO - Error here - 2023.09.07
+        #AttributeError: 'NoneType' object has no attribute 'exterior'
+        
         shp_largest_polygon_without_holes = Polygon(shp_largest_polygon.exterior)
         
         list_shp_hex_polygon.append(shp_largest_polygon_without_holes)
