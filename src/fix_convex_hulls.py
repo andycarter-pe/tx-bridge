@@ -220,9 +220,6 @@ def fn_fix_convex_hulls(str_convex_hull_filepath,str_input_json,dict_global_conf
         dict_meta = pipeline.metadata
         wkt_hex_boundary = dict_meta["metadata"]['filters.hexbin']['boundary']
     
-        # close the pipeline
-        #del pipeline
-        
         # Parse the geometries from WKT strings
         shp_geometries = [fn_parse_geometry(wkt_hex_boundary)]
     
@@ -230,10 +227,13 @@ def fn_fix_convex_hulls(str_convex_hull_filepath,str_input_json,dict_global_conf
         shp_largest_polygon, flt_largest_area = fn_find_largest_polygon(shp_geometries)
         
         # Create a new polygon using the exterior ring
-        # TODO - Error here - 2023.09.07
-        #AttributeError: 'NoneType' object has no attribute 'exterior'
+        # note: some hexbins will not return a polygon
         
-        shp_largest_polygon_without_holes = Polygon(shp_largest_polygon.exterior)
+        if flt_largest_area > 0:
+            shp_largest_polygon_without_holes = Polygon(shp_largest_polygon.exterior)
+        else:
+            # could not find the largest polygon...default to original shape
+            shp_largest_polygon_without_holes = shp_convexhull
         
         list_shp_hex_polygon.append(shp_largest_polygon_without_holes)
         list_int_points_convex_hull.append(n_points)

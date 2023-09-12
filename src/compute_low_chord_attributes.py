@@ -449,7 +449,7 @@ def fn_compute_low_chord_attributes(str_input_dir):
         # Filter the GeoDataFrame based on the condition
         gdf_filtered2 = gdf_filtered[~gdf_filtered['deck_elev'].apply(fn_has_nan)]
         
-        # Convert the 'ground_elv' column back to a string representation
+        # Convert the 'deck_elev' column back to a string representation
         gdf_filtered2['deck_elev'] = gdf_filtered2['deck_elev'].apply(lambda x: str(x))
         # ---
         
