@@ -1,5 +1,8 @@
 # In the folder containing this Dockerfile, run the following command
 # docker build -t civileng127/tx-bridge:20230911 .
+#
+# to ensure that the git clone is not cached
+# docker build --no-cache -t civileng127/tx-bridge:20230911c .
 
 # Use continuumio/miniconda3 as a parent image
 FROM continuumio/miniconda3

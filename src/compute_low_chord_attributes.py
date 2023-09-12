@@ -272,6 +272,12 @@ def fn_fix_ground_nulls(gdf):
 
     # added 2023.09.11
     
+    # TODO - 2023.09.11 - If first value is null, then set the first value to the 
+    # first non null value found
+    
+    # TODO - 2023.09.11 also ... set the last value to nearst elevation value
+    # TODO - 2023.09.11 - If all nan then remove the major axis line
+    
     # Create an empty list to store rows with malformed values
     list_malformed_rows = []
     int_count_bad = 0
@@ -289,7 +295,7 @@ def fn_fix_ground_nulls(gdf):
     if len(list_malformed_rows) > 0:
         # correct the ground profile data
         print("+-----------------------------------------------------------------+")
-        print('Fixing ground profiles: ' + str(len(list_malformed_rows)))
+        print('Fixing bad ground profiles: ' + str(len(list_malformed_rows)))
         
         for bad_index in list_malformed_rows:
 
@@ -332,7 +338,83 @@ def fn_fix_ground_nulls(gdf):
     else:
         # return the original geodataframe
         return(gdf)
-# ...................................................    
+# ...................................................   
+
+
+# ...................................................
+def fn_fix_deck_nulls(gdf):
+
+    # added 2023.09.11
+    # got lazy... could be combined with fn_fix_ground_nulls
+    
+    # Create an empty list to store rows with malformed values
+    list_malformed_rows = []
+    int_count_bad = 0
+
+    # determine the number of malformed ground profiles
+    for index, row in gdf.iterrows():
+        deck_elv = row['deck_elev']
+        try:
+            ast.literal_eval(deck_elv)
+        except (ValueError, SyntaxError):
+            # If ast.literal_eval raises an exception, add the row to the list
+            list_malformed_rows.append(index)
+            int_count_bad += 1
+
+    if len(list_malformed_rows) > 0:
+        # correct the ground profile data
+        print("+-----------------------------------------------------------------+")
+        print('Fixing bad deck profiles: ' + str(len(list_malformed_rows)))
+        
+        for bad_index in list_malformed_rows:
+
+            input_str = gdf.loc[bad_index]['deck_elev']
+
+            # Remove brackets and split the string by ','
+            values_str = input_str.strip('[]').split(',')
+
+            # Convert values to floats, handling 'nan' as np.nan
+            values = [float(val.strip()) if val.strip().lower() != 'nan' else np.nan for val in values_str]
+
+            # Find the indices of 'nan' values
+            nan_indices = [i for i, val in enumerate(values) if np.isnan(val)]
+
+            # Replace 'nan' values with interpolated values
+            for nan_index in nan_indices:
+                # Find the nearest non-'nan' values before and after the current 'nan' value
+                prev_index = nan_index
+                while np.isnan(values[prev_index]):
+                    prev_index -= 1
+                next_index = nan_index
+                while np.isnan(values[next_index]):
+                    next_index += 1
+
+                # Linear interpolation
+                interpolated_value = np.interp(nan_index, [prev_index, next_index], [values[prev_index], values[next_index]])
+
+                # Round the interpolated value to two decimal places
+                interpolated_value = round(interpolated_value, 2)
+
+                # Update the 'nan' value with the interpolated value
+                values[nan_index] = interpolated_value
+
+            # Convert the updated list of values back to a string
+            updated_values_str = [str(val) for val in values]
+            updated_str = '[' + ', '.join(updated_values_str) + ']'
+
+            gdf.at[bad_index, 'deck_elev'] = updated_str
+        return(gdf)
+    else:
+        # return the original geodataframe
+        return(gdf)
+# ...................................................   
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def fn_has_nan(lst):
+    # Function to check if the first or last element is NaN
+    return np.isnan(lst[0]) or np.isnan(lst[-1])
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # ---------------------------------------------------
@@ -349,8 +431,40 @@ def fn_compute_low_chord_attributes(str_input_dir):
         
         gdf_mjr_read = gpd.read_file(str_path_to_mjr_axis_gpkg)
         
+        # --- remove the lists where the first or last value of 'ground_elv' is nan
+        # Convert the string representation of the list to an actual list of floats
+        gdf_mjr_read['ground_elv'] = gdf_mjr_read['ground_elv'].apply(lambda x: eval(x))
+        
+        # Filter the GeoDataFrame based on the condition
+        gdf_filtered = gdf_mjr_read[~gdf_mjr_read['ground_elv'].apply(fn_has_nan)]
+        
+        # Convert the 'ground_elv' column back to a string representation
+        gdf_filtered['ground_elv'] = gdf_filtered['ground_elv'].apply(lambda x: str(x))
+        # ---
+        
+        # --- remove the lists where the first or last value of 'deck_elev' is nan
+        # Convert the string representation of the list to an actual list of floats
+        gdf_filtered['deck_elev'] = gdf_filtered['deck_elev'].apply(lambda x: eval(x))
+        
+        # Filter the GeoDataFrame based on the condition
+        gdf_filtered2 = gdf_filtered[~gdf_filtered['deck_elev'].apply(fn_has_nan)]
+        
+        # Convert the 'ground_elv' column back to a string representation
+        gdf_filtered2['deck_elev'] = gdf_filtered2['deck_elev'].apply(lambda x: str(x))
+        # ---
+        
+        int_removed_nan = len(gdf_mjr_read) - len(gdf_filtered2)
+        if int_removed_nan > 0:
+            print("+-----------------------------------------------------------------+")
+            print("Major axis removed wiith leading or trailing nan: " + str(int_removed_nan))
+        
+        # --- if nan exists in the midle of the 'ground_elv' interpolate missing values
         # Fix nulls in ground elevation lists - 2023.09.11
-        gdf_mjr = fn_fix_ground_nulls(gdf_mjr_read)
+        gdf_filtered3 = fn_fix_ground_nulls(gdf_filtered2)
+        
+        # --- if nan exists in the midle of the 'deck_elev' interpolate missing values
+        # Fix nulls in deck elevation lists - 2023.09.11
+        gdf_mjr = fn_fix_deck_nulls(gdf_filtered3)
         
         print("+-----------------------------------------------------------------+")
         print("Calculating low chord...")
@@ -375,10 +489,6 @@ def fn_compute_low_chord_attributes(str_input_dir):
             # note: ast.literal_eval(row['sta']) - converts string to list
             # create a pandas dataframe
             
-            # Fixed 2023.09.11 - Ground elevation may contain nan
-            
-            
-
             df_bridge = pd.DataFrame(list(zip(ast.literal_eval(row['sta']),
                                               ast.literal_eval(row['ground_elv']),
                                               ast.literal_eval(row['deck_elev'])
