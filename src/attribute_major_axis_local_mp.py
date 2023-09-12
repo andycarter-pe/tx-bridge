@@ -869,80 +869,83 @@ def fn_attribute_mjr_axis(str_input_dir,int_class,str_input_cog_ground_dem,
             pool.join()
             
             # TODO - what if there are no items in list_gdfs - 2023.09.05?
-            gdf_appended_ln_w_hull_id = gpd.GeoDataFrame(pd.concat(list_gdfs), crs=list_gdfs[0].crs)
-            
-            # --------------
-
-            # ---------------------------
-            # add the lat/long of the centerpoint of the major axis line
-            gdf_mjr_axis_ln_wgs = gdf_appended_ln_w_hull_id.to_crs(wgs)
-            
-            # add the lat/long coloumns
-            gdf_appended_ln_w_hull_id['latitude'] = ''
-            gdf_appended_ln_w_hull_id['longitude'] = ''
-            
-            for index, row in gdf_mjr_axis_ln_wgs.iterrows():
-                # -------lat / Long Coordinates of Major Axis Centeroid -----
-                geom_wkt = row['geometry']
-                str_lon = str(round(geom_wkt.centroid.coords[0][0], 4))
-                str_lat = str(round(geom_wkt.centroid.coords[0][1], 4))
+            if len(list_gdfs) > 0:
+                gdf_appended_ln_w_hull_id = gpd.GeoDataFrame(pd.concat(list_gdfs), crs=list_gdfs[0].crs)
                 
-                # append the lat and long
-                gdf_appended_ln_w_hull_id.at[index, 'latitude'] = str_lat
-                gdf_appended_ln_w_hull_id.at[index, 'longitude'] = str_lon
-            # ---------------------------
-            
-            # add the 'run' attributes to the geodataframe
-            str_aoi_name = json_run_data["str_aoi_name"]
-            str_copc_name = json_run_data["copc_point_cloud"]["copc_name"]
-            int_copc_date = json_run_data["copc_point_cloud"]["copc_date"]
-            str_copc_shortname = json_run_data["copc_point_cloud"]["copc_short_name"]
-            
-            gdf_appended_ln_w_hull_id['aoi_name'] = str_aoi_name 
-            gdf_appended_ln_w_hull_id['copc_name'] = str_copc_name 
-            gdf_appended_ln_w_hull_id['copc_date'] = int_copc_date
-            gdf_appended_ln_w_hull_id['copc_name_s'] = str_copc_shortname
-
-            # gdf_appended_ln_w_hull_id.to_file(r'C:\test_bridge_20221021\append_ln_w_hull_id.geojson', driver='GeoJSON')
-            str_path_xs_folder = os.path.join(str_input_dir, '08_cross_sections')
-            
-            # create the output directory if it does not exist
-            os.makedirs(str_path_xs_folder, exist_ok=True)
-            
-            str_major_axis_xs_file = os.path.join(str_path_xs_folder, '08_01_mjr_axis_xs.gpkg')
-            
-            # export the geopackage
-            gdf_appended_ln_w_hull_id.to_file(str_major_axis_xs_file, driver='GPKG')
-            
-            # --- running the additional sub-processes for additional attribution
-            # Assign the feature line id
-            fn_assign_feature_id_to_mjr_axis(str_input_dir,dict_global_config_data)
-            
-            # assign the National Bridge Inventory here
-            str_nbi_point_filepath = dict_global_config_data['global_input_files']['str_texas_nbi_filepath']
-            fn_conflate_nbi(str_input_dir, str_nbi_point_filepath)
-            
-            # compute the low chord attributes
-            fn_compute_low_chord_attributes(str_input_dir)
-            
-            # add the hull geometry to the record
-            fn_add_hull_geometry(str_input_dir, int_class)
-            
-            # add the HAND rating curves to each bridge
-            str_hand_stream_ln_gpkg = dict_global_config_data['global_input_files']['str_hand_stream_ln_gpkg']
-            str_hydro_table_parquet = dict_global_config_data['global_input_files']['str_hydro_table_parquet']
-            str_segment_field_name = dict_global_config_data['global_input_files']['str_segment_field_name']
-            
-            fn_fetch_hand_rating_curves(str_input_dir,str_hand_stream_ln_gpkg,str_hydro_table_parquet,str_segment_field_name)
-            
-            # plot the cross sections
-            str_flow_csv_filename = 'NONE'
-            str_majr_axis_filename = '08_08_mjr_axis_xs_w_feature_id_nbi_low_hull_rating.gpkg' # created from fn_add_hull_geometry
-            
-            fn_plot_cross_sections(str_input_dir,str_majr_axis_filename,str_flow_csv_filename)
-            
-            # generate the kml
-            fn_generate_kml(str_input_dir,str_input_json,dict_global_config_data)
+                # --------------
+    
+                # ---------------------------
+                # add the lat/long of the centerpoint of the major axis line
+                gdf_mjr_axis_ln_wgs = gdf_appended_ln_w_hull_id.to_crs(wgs)
+                
+                # add the lat/long coloumns
+                gdf_appended_ln_w_hull_id['latitude'] = ''
+                gdf_appended_ln_w_hull_id['longitude'] = ''
+                
+                for index, row in gdf_mjr_axis_ln_wgs.iterrows():
+                    # -------lat / Long Coordinates of Major Axis Centeroid -----
+                    geom_wkt = row['geometry']
+                    str_lon = str(round(geom_wkt.centroid.coords[0][0], 4))
+                    str_lat = str(round(geom_wkt.centroid.coords[0][1], 4))
+                    
+                    # append the lat and long
+                    gdf_appended_ln_w_hull_id.at[index, 'latitude'] = str_lat
+                    gdf_appended_ln_w_hull_id.at[index, 'longitude'] = str_lon
+                # ---------------------------
+                
+                # add the 'run' attributes to the geodataframe
+                str_aoi_name = json_run_data["str_aoi_name"]
+                str_copc_name = json_run_data["copc_point_cloud"]["copc_name"]
+                int_copc_date = json_run_data["copc_point_cloud"]["copc_date"]
+                str_copc_shortname = json_run_data["copc_point_cloud"]["copc_short_name"]
+                
+                gdf_appended_ln_w_hull_id['aoi_name'] = str_aoi_name 
+                gdf_appended_ln_w_hull_id['copc_name'] = str_copc_name 
+                gdf_appended_ln_w_hull_id['copc_date'] = int_copc_date
+                gdf_appended_ln_w_hull_id['copc_name_s'] = str_copc_shortname
+    
+                # gdf_appended_ln_w_hull_id.to_file(r'C:\test_bridge_20221021\append_ln_w_hull_id.geojson', driver='GeoJSON')
+                str_path_xs_folder = os.path.join(str_input_dir, '08_cross_sections')
+                
+                # create the output directory if it does not exist
+                os.makedirs(str_path_xs_folder, exist_ok=True)
+                
+                str_major_axis_xs_file = os.path.join(str_path_xs_folder, '08_01_mjr_axis_xs.gpkg')
+                
+                # export the geopackage
+                gdf_appended_ln_w_hull_id.to_file(str_major_axis_xs_file, driver='GPKG')
+                
+                # --- running the additional sub-processes for additional attribution
+                # Assign the feature line id
+                fn_assign_feature_id_to_mjr_axis(str_input_dir,dict_global_config_data)
+                
+                # assign the National Bridge Inventory here
+                str_nbi_point_filepath = dict_global_config_data['global_input_files']['str_texas_nbi_filepath']
+                fn_conflate_nbi(str_input_dir, str_nbi_point_filepath)
+                
+                # compute the low chord attributes
+                fn_compute_low_chord_attributes(str_input_dir)
+                
+                # add the hull geometry to the record
+                fn_add_hull_geometry(str_input_dir, int_class)
+                
+                # add the HAND rating curves to each bridge
+                str_hand_stream_ln_gpkg = dict_global_config_data['global_input_files']['str_hand_stream_ln_gpkg']
+                str_hydro_table_parquet = dict_global_config_data['global_input_files']['str_hydro_table_parquet']
+                str_segment_field_name = dict_global_config_data['global_input_files']['str_segment_field_name']
+                
+                fn_fetch_hand_rating_curves(str_input_dir,str_hand_stream_ln_gpkg,str_hydro_table_parquet,str_segment_field_name)
+                
+                # plot the cross sections
+                str_flow_csv_filename = 'NONE'
+                str_majr_axis_filename = '08_08_mjr_axis_xs_w_feature_id_nbi_low_hull_rating.gpkg' # created from fn_add_hull_geometry
+                
+                fn_plot_cross_sections(str_input_dir,str_majr_axis_filename,str_flow_csv_filename)
+                
+                # generate the kml
+                fn_generate_kml(str_input_dir,str_input_json,dict_global_config_data)
+            else:
+               print("  COMPLETE: No major axis lines found within area of interest ") 
     
         else:
             print("  ERROR: Area of Interest not found in: " + str_path_to_aoi_folder)
