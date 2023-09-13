@@ -11,6 +11,7 @@
 
 # ************************************************************
 import geopandas as gpd
+import pandas as pd
 
 import pathlib
 from pathlib import Path
@@ -21,6 +22,9 @@ import os
 
 # ----------------------------------------------------
 def fn_add_hull_geometry_early(gdf_appended_ln_w_hull_id, int_class):
+    
+    # option to turn off the SettingWithCopyWarning
+    pd.set_option('mode.chained_assignment', None)
     
     print('Early add of bridge geometry...')
     

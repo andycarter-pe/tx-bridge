@@ -272,12 +272,6 @@ def fn_fix_ground_nulls(gdf):
 
     # added 2023.09.11
     
-    # TODO - 2023.09.11 - If first value is null, then set the first value to the 
-    # first non null value found
-    
-    # TODO - 2023.09.11 also ... set the last value to nearst elevation value
-    # TODO - 2023.09.11 - If all nan then remove the major axis line
-    
     # Create an empty list to store rows with malformed values
     list_malformed_rows = []
     int_count_bad = 0
@@ -432,6 +426,9 @@ def fn_parse_list(s):
 # ---------------------------------------------------
 def fn_compute_low_chord_attributes(str_input_dir):
     
+    # option to turn off the SettingWithCopyWarning
+    pd.set_option('mode.chained_assignment', None)
+    
     flt_default_thickness = 3.0 # hard coded thickness if there isn't a value
     flt_tolerance = 0.25 # vertical tolerance to connect the abutment to the ground
     
@@ -557,9 +554,11 @@ def fn_compute_low_chord_attributes(str_input_dir):
             list_start_index = list_start_end_index[0]
             list_end_index = list_start_end_index[1]
             
-            
+            # added 2023.09.13 -- setting a default list_new_deck
+            list_new_deck = df_deck['deck_elev'].to_list()
             
             if row['convey_ar'] > 0:
+                
                 if len(list_start_index) > 0:
                     list_new_deck = fn_fix_deck_left_abut(df_deck, flt_tolerance, list_start_index)
                     # create a new df_deck with the adjusted left abutment
@@ -573,8 +572,9 @@ def fn_compute_low_chord_attributes(str_input_dir):
                     df_deck = pd.DataFrame(list(zip(list_station,
                                         list_ground_elv,
                                         list_new_deck)),columns =['sta','ground_elv', 'deck_elev'])
-        
-        
+                    
+                # TODO - 2023.09.13 -- does list_new_deck exist and have data?
+                    
                 # round all the values in list
                 list_new_deck_round = [round(flt_elev, 2) for flt_elev in list_new_deck]
                 
