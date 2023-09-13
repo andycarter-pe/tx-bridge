@@ -412,8 +412,10 @@ def fn_fix_deck_nulls(gdf):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def fn_has_nan(lst):
-    # Function to check if the first or last element is NaN
-    return np.isnan(lst[0]) or np.isnan(lst[-1])
+    # Check if lst is a list
+    if isinstance(lst, list) and len(lst) > 0:
+        return np.isnan(lst[0]) or np.isnan(lst[-1])
+    return True  # Return True if it's not a list or an empty list
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -443,8 +445,6 @@ def fn_compute_low_chord_attributes(str_input_dir):
         
         # --- remove the lists where the first or last value of 'ground_elv' is nan
         # Convert the string representation of the list to an actual list of floats
-        #gdf_mjr_read['ground_elv'] = gdf_mjr_read['ground_elv'].apply(lambda x: eval(x))
-        #gdf_mjr_read['ground_elv'] = gdf_mjr_read['ground_elv'].apply(lambda x: np.nan if x == 'nan' else eval(x))
         gdf_mjr_read['ground_elv'] = gdf_mjr_read['ground_elv'].apply(fn_parse_list)
         
         # Filter the GeoDataFrame based on the condition
@@ -456,8 +456,6 @@ def fn_compute_low_chord_attributes(str_input_dir):
         
         # --- remove the lists where the first or last value of 'deck_elev' is nan
         # Convert the string representation of the list to an actual list of floats
-        #gdf_filtered['deck_elev'] = gdf_filtered['deck_elev'].apply(lambda x: eval(x))
-        #gdf_filtered['deck_elev'] = gdf_filtered['deck_elev'].apply(lambda x: np.nan if x == 'nan' else eval(x))
         gdf_filtered['deck_elev'] = gdf_filtered['deck_elev'].apply(fn_parse_list)
         
         # Filter the GeoDataFrame based on the condition
