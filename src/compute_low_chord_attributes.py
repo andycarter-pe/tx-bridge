@@ -433,7 +433,8 @@ def fn_compute_low_chord_attributes(str_input_dir):
         
         # --- remove the lists where the first or last value of 'ground_elv' is nan
         # Convert the string representation of the list to an actual list of floats
-        gdf_mjr_read['ground_elv'] = gdf_mjr_read['ground_elv'].apply(lambda x: eval(x))
+        #gdf_mjr_read['ground_elv'] = gdf_mjr_read['ground_elv'].apply(lambda x: eval(x))
+        gdf_mjr_read['ground_elv'] = gdf_mjr_read['ground_elv'].apply(lambda x: np.nan if x == 'nan' else eval(x))
         
         # Filter the GeoDataFrame based on the condition
         gdf_filtered = gdf_mjr_read[~gdf_mjr_read['ground_elv'].apply(fn_has_nan)]
@@ -444,7 +445,8 @@ def fn_compute_low_chord_attributes(str_input_dir):
         
         # --- remove the lists where the first or last value of 'deck_elev' is nan
         # Convert the string representation of the list to an actual list of floats
-        gdf_filtered['deck_elev'] = gdf_filtered['deck_elev'].apply(lambda x: eval(x))
+        #gdf_filtered['deck_elev'] = gdf_filtered['deck_elev'].apply(lambda x: eval(x))
+        gdf_filtered['deck_elev'] = gdf_filtered['deck_elev'].apply(lambda x: np.nan if x == 'nan' else eval(x))
         
         # Filter the GeoDataFrame based on the condition
         gdf_filtered2 = gdf_filtered[~gdf_filtered['deck_elev'].apply(fn_has_nan)]
