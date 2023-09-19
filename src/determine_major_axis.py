@@ -62,7 +62,7 @@ def fn_get_major_axis_for_polygon(shp_bridge_ar_fn, flt_bridge_buffer_fn, gdf_tr
     if isinstance(shp_bridge_ar_fn, Polygon):
         shp_bridge_ln = LineString(list(shp_bridge_ar_fn.exterior.coords))
     elif isinstance(shp_bridge_ar_fn, MultiPolygon):
-        shp_largest_polygon = max(shp_bridge_ar_fn, key=lambda polygon: polygon.area)
+        shp_largest_polygon = max(shp_bridge_ar_fn.geoms, key=lambda polygon: polygon.area)
         shp_bridge_ln = LineString(list(shp_largest_polygon.exterior.coords))
 
     # buffer the shape - to get some distance beyond the abutments
