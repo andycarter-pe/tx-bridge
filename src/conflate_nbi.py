@@ -227,7 +227,7 @@ def fn_determine_nbi(list_input_files):
     str_input_dir = list_input_files[3]
     
     print("+-----------------------------------------------------------------+")
-    print('Loading the National Bridge Inventroy Data ~ 15 sec')
+    print('Loading the National Bridge Inventory ~ 15 sec')
     # read the input shapefiles
     gdf_major_axis_ln = gpd.read_file(str_mjr_axis_ln_shp)
     gdf_aoi_ar = gpd.read_file(str_aoi_ar_shp)

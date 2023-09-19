@@ -50,7 +50,7 @@ def fn_get_osm_lines_from_file(str_input_path,
         str_output_dir: path to write the output shapefile
 
     Returns:
-        geodataframe of transporation lines (edges)
+        geodataframe of transportation lines (edges)
     """
     
     print(" ")
@@ -96,7 +96,7 @@ def fn_get_osm_lines_from_file(str_input_path,
     # convert list to tuple
     tup_bbox = tuple(list_bbox)
     
-    print("Clipping OpenStreetMap Transporation line file... ~ 1 minute")
+    print("Clipping OpenStreetMap Transportation line file... ~ 1 minute")
     
     # read bounding line data within the bounding box
     gdf_bb = gpd.read_file(str_osm_line_shpaefile_path,bbox=tup_bbox)
@@ -106,7 +106,7 @@ def fn_get_osm_lines_from_file(str_input_path,
     # convert road data to source crs
     gdf_bb_prj = gdf_bb.to_crs(source_crs)
     
-    print('Writing clipped transporation file ... ~ 1 minute')
+    print('Writing clipped transportation file ... ~ 1 minute')
     
     str_file_shp_to_write = os.path.join(str_output_dir, 'osm_trans_ln.shp')
     gdf_bb_prj.to_file(str_file_shp_to_write)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     
     parser.add_argument('-s',
                         dest = "str_osm_line_shpaefile_path",
-                        help=r'REQUIRED: path to the OSM transporation shapefile (line) Example: D:\osm_download\texas_osm_transport_dissolve_ln_4326.shp',
+                        help=r'REQUIRED: path to the OSM transportation shapefile (line) Example: D:\osm_download\texas_osm_transport_dissolve_ln_4326.shp',
                         required=True,
                         metavar='FILE',
                         type=lambda x: is_valid_file(parser, x))

@@ -369,25 +369,46 @@ def fn_process_all_cross_sections(list_input_files, str_flow_csv_filename):
     # ----plotting cross sections ----
     l = len(gdf_mjr_axis_envelopes)
     
-    num_processors = (mp.cpu_count() - 1)
-    # TODO - problems on HPC - 2023.09.03
-    num_processors = 16
-    pool = Pool(processes = num_processors)
-    
     # create a list of geodataframes where each item contains one row
     gdf_mjr_axis_envelopes['xs_folder'] = str_xs_folder
-    
+        
     # create a list of geodataframes where each item contains one row
     list_of_single_row_gdfs = [gpd.GeoDataFrame([row], crs=gdf_mjr_axis_envelopes.crs) for _, row in gdf_mjr_axis_envelopes.iterrows()]
-
-    list_ints = list(tqdm.tqdm(pool.imap(fn_plot_single_xs, list_of_single_row_gdfs),
-                               total = l,
-                               desc='Plot XS',
-                               bar_format = "{desc}:({n_fmt}/{total_fmt})|{bar}| {percentage:.1f}%",
-                               ncols=67 ))
-
-    pool.close()
-    pool.join()
+    
+    num_processors = (mp.cpu_count() - 1)
+    try:
+        # problems on HPC - memory allocation
+        # setting cores to 16 max
+        if num_processors > 16:
+            num_processors = 16
+            
+        pool = Pool(processes = num_processors)
+        
+        list_ints = list(tqdm.tqdm(pool.imap(fn_plot_single_xs, list_of_single_row_gdfs),
+                                   total = l,
+                                   desc='Plot XS',
+                                   bar_format = "{desc}:({n_fmt}/{total_fmt})|{bar}| {percentage:.1f}%",
+                                   ncols=67 ))
+    
+        pool.close()
+        pool.join()
+        
+    except OSError:
+        # there is a memory allocation... run in a serial loop
+        # 
+        
+        int_count = 0
+        str_prefix = "Plotting XS " + str(int_count) + ' of ' + str(l)
+        fn_print_progress_bar(0, l, prefix = str_prefix , suffix = 'Complete', length = 29)
+        
+        for gdf_single_row in list_of_single_row_gdfs:
+            # -- update progress bar --
+            time.sleep(0.02)
+            int_count += 1
+            str_prefix = "Plotting XS " + str(int_count) + ' of ' + str(l)
+            fn_print_progress_bar(int_count, l, prefix = str_prefix , suffix = 'Complete', length = 29)
+            
+            int_return_val = fn_plot_single_xs(gdf_single_row)
     # --------------
     
 # ..................................................
