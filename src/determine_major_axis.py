@@ -4,7 +4,7 @@
 #
 # Created by: Andy Carter, PE
 # Created - 2022.05.16
-# Last revised - 2022.05.16
+# Last revised - 2023.09.19
 #
 # tx-bridge - fourth processing script
 # Uses the 'pdal' conda environment
@@ -17,7 +17,7 @@ import pandas as pd
 
 import os
 
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Polygon, MultiPolygon
 
 import time
 import datetime
@@ -41,7 +41,7 @@ def is_valid_file(parser, arg):
 def fn_get_major_axis_for_polygon(shp_bridge_ar_fn, flt_bridge_buffer_fn, gdf_trans):
 
     """
-    Last revised - 20220418
+    Last revised - 20230919
     
     Get the major axis of the polygon object 'bridge' from an input line vector dataset 'transportation'
 
@@ -57,7 +57,13 @@ def fn_get_major_axis_for_polygon(shp_bridge_ar_fn, flt_bridge_buffer_fn, gdf_tr
     """
     
     # bridge polygon to Linestring
-    shp_bridge_ln = LineString(list(shp_bridge_ar_fn.exterior.coords))
+    
+    # added code - 2023.09.19 - largest polygon for Multi-polygon
+    if isinstance(shp_bridge_ar_fn, Polygon):
+        shp_bridge_ln = LineString(list(shp_bridge_ar_fn.exterior.coords))
+    elif isinstance(shp_bridge_ar_fn, MultiPolygon):
+        shp_largest_polygon = max(shp_bridge_ar_fn, key=lambda polygon: polygon.area)
+        shp_bridge_ln = LineString(list(shp_largest_polygon.exterior.coords))
 
     # buffer the shape - to get some distance beyond the abutments
     shp_bridge_buffer_ar = shp_bridge_ar_fn.buffer(flt_bridge_buffer_fn)
