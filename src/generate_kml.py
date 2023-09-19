@@ -2,7 +2,7 @@
 #
 # Created by: Andy Carter, PE
 # Created - 2023.07.28
-# Last revised - 2023.08.01
+# Last revised - 2023.09.19
 #
 # tx-bridge - sub-process of the 8th processing script
 # ************************************************************
@@ -15,6 +15,8 @@ from simplekml import Kml
 
 import geopandas as gpd
 import os
+
+from shapely.geometry import Polygon, MultiPolygon
 
 import time
 import datetime
@@ -198,7 +200,13 @@ def fn_generate_kml(str_input_dir,str_input_json,dict_global_config_data):
     
     for index, row in gdf_hull_ar_wgs.iterrows():
         shape_geom = row['geometry']
-        list_coords = list(shape_geom.exterior.coords)
+        
+        if isinstance(shape_geom, Polygon):
+            list_coords = list(shape_geom.exterior.coords)
+        elif isinstance(shape_geom, MultiPolygon):
+            shp_largest_polygon = max(shape_geom.geoms, key=lambda polygon: polygon.area)
+            list_coords = list(shp_largest_polygon.exterior.coords)
+            
         # append the first points as a new last point to close
         list_coords.append(list_coords[0])
         
