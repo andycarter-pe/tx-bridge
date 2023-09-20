@@ -640,6 +640,7 @@ def fn_populate_sta_ground_deck_elev(gdf_singlerow):
                                                                 gdf_singlerow.crs, 
                                                                 str_input_cog_ground_dem)
         
+        # added 2023.09.20 - error trapping bad dem inputs
         if ground_dem_local_proj != None:
             # get a pandas dataframe of the ground and deck geometry profile
             gdf = fn_get_profile_gdf_on_major_axis_from_dems(shp_mjr_axis_ln,
@@ -666,7 +667,9 @@ def fn_populate_sta_ground_deck_elev(gdf_singlerow):
             list_str_columns_to_drop = ['flt_mjr_axis','is_feet','cog_ground_dem']
             gdf_singlerow = gdf_singlerow.drop(columns=list_str_columns_to_drop, axis=1)
         
-        return(gdf_singlerow)
+            return(gdf_singlerow)
+        else:
+            return(None)
 # ...........................................
 
 
@@ -874,6 +877,9 @@ def fn_attribute_mjr_axis(str_input_dir,int_class,str_input_cog_ground_dem,
 
             pool.close()
             pool.join()
+            
+            # added 2023.09.20 - Drop the 'None' values
+            list_gdfs = [item for item in list_gdfs if item is not None]
             
             if len(list_gdfs) > 0:
                 gdf_appended_ln_w_hull_id = gpd.GeoDataFrame(pd.concat(list_gdfs), crs=list_gdfs[0].crs)
