@@ -15,6 +15,7 @@ import os
 import tqdm
 
 import rasterio
+from rasterio.errors import RasterioIOError
 
 import rtree
 
@@ -97,17 +98,19 @@ def fn_create_rtree_from_geotiff_dir(str_input_directory,
                                    ncols=65,
                                    bar_format = "{desc}:({n_fmt}/{total_fmt})|{bar}| {percentage:.1f}%"):
             filepath = os.path.join(str_input_directory, tiff_file)
-            with rasterio.open(filepath) as src:
-                # bounding box of the tile
-                list_box.append(src.bounds)
-                
-                # projection of the tile
-                str_crs = str(src.crs)
-                
-                # add the polygon to the rtree index with pathname to dems
-                itree.insert(int_count, src.bounds, obj = (int_count, tuple(src.bounds), filepath, str_crs))
-                
-                int_count += 1
+            try:
+                with rasterio.open(filepath) as src:
+                    # bounding box of the tile
+                    list_box.append(src.bounds)
+                    
+                    # projection of the tile
+                    str_crs = str(src.crs)
+                    
+                    # add the polygon to the rtree index with pathname to dems
+                    itree.insert(int_count, src.bounds, obj = (int_count, tuple(src.bounds), filepath, str_crs))
+            except RasterioIOError:
+                print(f"Error: '{filepath}' not recognized as a supported file format.")
+            int_count += 1
     itree.close()
     
     # initialize variables for minimum and maximum coordinates

@@ -22,6 +22,7 @@ from shapely.ops import split
 import rioxarray as rio
 from rasterio.io import MemoryFile
 from rioxarray.merge import merge_arrays
+from rasterio.errors import RasterioIOError
 
 import numpy as np
 import math
@@ -290,6 +291,7 @@ def fn_get_ground_dem_from_provided_cog(shp_mjr_axis_ar_buffer_lambert, b_is_fee
 # .............................................
 def fn_get_ground_dem_rtree(shp_mjr_axis_ar_buffer_lambert, b_is_feet, crs_line, str_rtree_path):
     # added MAC - 2023.08.29
+    # revised - 2023.09.20 - error trap of 'bad' data
 
     # load the rtree index
     itree = rtree.index.Index(str_rtree_path)
@@ -308,33 +310,37 @@ def fn_get_ground_dem_rtree(shp_mjr_axis_ar_buffer_lambert, b_is_feet, crs_line,
     list_xar_dem = []
     if len(list_intersecting_dem_paths) > 0:
         for str_dem_filepath in list_intersecting_dem_paths:
-            xar_input_dem = rio.open_rasterio(
-                filename=str_dem_filepath,
-                chunks='auto',
-                parse_coordinates=True,
-                masked=True)
-            
-            xar_input_dem_lambert  = xar_input_dem.rio.reproject("EPSG:3857")
-            '''
-            xar_dem = rio.open_rasterio(
-                filename=str_dem_filepath,
-                chunks='auto',
-                parse_coordinates=True,
-                masked=True).rio.clip_box(minx=b[0], miny=b[1], maxx=b[2], maxy=b[3])
-            '''
-            # read the DEM as a "Rioxarray"
-            ground_dem = xar_input_dem_lambert.squeeze()
-            list_xar_dem.append(ground_dem)
+            try:
+                xar_input_dem = rio.open_rasterio(
+                    filename=str_dem_filepath,
+                    chunks='auto',
+                    parse_coordinates=True,
+                    masked=True)
+                
+                xar_input_dem_lambert  = xar_input_dem.rio.reproject("EPSG:3857")
+    
+                # read the DEM as a "Rioxarray"
+                ground_dem = xar_input_dem_lambert.squeeze()
+                list_xar_dem.append(ground_dem)
+            except RasterioIOError:
+                # added 2023.09.20 - Some img can't be read by rasterio (corrupt files)
+                continue # continue to next file if error occurs
 
-        # merge the list of rioxarrays
-        ground_dem_lambert = merge_arrays(list_xar_dem)
-        
-        # reproject rioxarray from lambert to input projection
-        ground_dem_local_proj = ground_dem_lambert.rio.reproject(crs_line)
-        
-        if b_is_feet:
-            # scale the raster from meters to feet
-            ground_dem_local_proj = ground_dem_local_proj * 3.28084
+        if len(list_xar_dem) > 0:
+            # merge the list of rioxarrays
+            ground_dem_lambert = merge_arrays(list_xar_dem)
+            
+            # reproject rioxarray from lambert to input projection
+            ground_dem_local_proj = ground_dem_lambert.rio.reproject(crs_line)
+            
+            if b_is_feet:
+                # scale the raster from meters to feet
+                ground_dem_local_proj = ground_dem_local_proj * 3.28084
+        else:
+            ground_dem_local_proj = None
+    else:
+        ground_dem_local_proj = None
+            
     return(ground_dem_local_proj)
 # .............................................
 
@@ -633,31 +639,32 @@ def fn_populate_sta_ground_deck_elev(gdf_singlerow):
                                                                 b_is_feet,
                                                                 gdf_singlerow.crs, 
                                                                 str_input_cog_ground_dem)
+        
+        if ground_dem_local_proj != None:
+            # get a pandas dataframe of the ground and deck geometry profile
+            gdf = fn_get_profile_gdf_on_major_axis_from_dems(shp_mjr_axis_ln,
+                                                             str_mjr_axis_ln_crs,
+                                                             ground_dem_local_proj,
+                                                             deck_dem_local_proj)
             
-        # get a pandas dataframe of the ground and deck geometry profile
-        gdf = fn_get_profile_gdf_on_major_axis_from_dems(shp_mjr_axis_ln,
-                                                         str_mjr_axis_ln_crs,
-                                                         ground_dem_local_proj,
-                                                         deck_dem_local_proj)
-        
-        # get a pandas dataframe of the smoothed cross section
-        df_smooth_ground_and_deck = fn_get_smooth_deck_and_ground_profile(gdf)
-
-        # round all values to two decimal places
-        df_smooth_ground_and_deck = df_smooth_ground_and_deck.round(2)
-
-        # add the lists as strings to the current row
-        str_list_station = str(df_smooth_ground_and_deck['sta'].tolist())
-        str_list_ground_elev = str(df_smooth_ground_and_deck['ground_elev'].tolist())
-        str_list_max_elev_road_deck = str(df_smooth_ground_and_deck['max_elev_road_deck'].tolist())
-
-        # append the values to the dataframe
-        gdf_singlerow.at[int_row_index, 'sta'] = str_list_station
-        gdf_singlerow.at[int_row_index, 'ground_elv'] = str_list_ground_elev
-        gdf_singlerow.at[int_row_index, 'deck_elev'] = str_list_max_elev_road_deck
-        
-        list_str_columns_to_drop = ['flt_mjr_axis','is_feet','cog_ground_dem']
-        gdf_singlerow = gdf_singlerow.drop(columns=list_str_columns_to_drop, axis=1)
+            # get a pandas dataframe of the smoothed cross section
+            df_smooth_ground_and_deck = fn_get_smooth_deck_and_ground_profile(gdf)
+    
+            # round all values to two decimal places
+            df_smooth_ground_and_deck = df_smooth_ground_and_deck.round(2)
+    
+            # add the lists as strings to the current row
+            str_list_station = str(df_smooth_ground_and_deck['sta'].tolist())
+            str_list_ground_elev = str(df_smooth_ground_and_deck['ground_elev'].tolist())
+            str_list_max_elev_road_deck = str(df_smooth_ground_and_deck['max_elev_road_deck'].tolist())
+    
+            # append the values to the dataframe
+            gdf_singlerow.at[int_row_index, 'sta'] = str_list_station
+            gdf_singlerow.at[int_row_index, 'ground_elv'] = str_list_ground_elev
+            gdf_singlerow.at[int_row_index, 'deck_elev'] = str_list_max_elev_road_deck
+            
+            list_str_columns_to_drop = ['flt_mjr_axis','is_feet','cog_ground_dem']
+            gdf_singlerow = gdf_singlerow.drop(columns=list_str_columns_to_drop, axis=1)
         
         return(gdf_singlerow)
 # ...........................................
@@ -868,7 +875,6 @@ def fn_attribute_mjr_axis(str_input_dir,int_class,str_input_cog_ground_dem,
             pool.close()
             pool.join()
             
-            # TODO - what if there are no items in list_gdfs - 2023.09.05?
             if len(list_gdfs) > 0:
                 gdf_appended_ln_w_hull_id = gpd.GeoDataFrame(pd.concat(list_gdfs), crs=list_gdfs[0].crs)
                 
@@ -904,7 +910,6 @@ def fn_attribute_mjr_axis(str_input_dir,int_class,str_input_cog_ground_dem,
                 gdf_appended_ln_w_hull_id['copc_date'] = int_copc_date
                 gdf_appended_ln_w_hull_id['copc_name_s'] = str_copc_shortname
     
-                # gdf_appended_ln_w_hull_id.to_file(r'C:\test_bridge_20221021\append_ln_w_hull_id.geojson', driver='GeoJSON')
                 str_path_xs_folder = os.path.join(str_input_dir, '08_cross_sections')
                 
                 # create the output directory if it does not exist
