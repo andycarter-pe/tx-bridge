@@ -4,7 +4,7 @@
 #
 # Created by: Andy Carter, PE
 # Created - 2022.05.16
-# Last revised - 2023.09.19
+# Last revised - 2023.09.20
 #
 # tx-bridge - fourth processing script
 # Uses the 'pdal' conda environment
@@ -184,6 +184,14 @@ def fn_determine_major_axis(str_bridge_polygons_path,str_trans_line_path,str_out
     
     # read the bridge polygons
     gdf_bridge_ar = gpd.read_file(str_bridge_polygons_path)
+    
+    # revised - 2023.09.20 - gdf_bridge_ar may contain items other than Polygons
+    # need to remove these non Polygons
+    if not gdf_bridge_ar.geometry.type.equals("Polygon"):
+        print('Filtering out non-polygon items in hull')
+        # Filter out non-Polygon geometries
+        gdf_bridge_ar = gdf_bridge_ar[gdf_bridge_ar.geometry.type == "Polygon"]
+        gdf_bridge_ar.to_file(str_bridge_polygons_path, driver="GPKG")
     
     print('Reading transportation lines ...')
     # read the transporation linework

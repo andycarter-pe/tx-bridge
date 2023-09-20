@@ -317,6 +317,8 @@ def fn_get_ground_dem_rtree(shp_mjr_axis_ar_buffer_lambert, b_is_feet, crs_line,
                     parse_coordinates=True,
                     masked=True)
                 
+                # TODO - 2023.09.20 - run 78 reads a xar with no crs?
+                # and therefore can't reproject
                 xar_input_dem_lambert  = xar_input_dem.rio.reproject("EPSG:3857")
     
                 # read the DEM as a "Rioxarray"
