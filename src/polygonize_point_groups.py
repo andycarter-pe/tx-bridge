@@ -304,17 +304,6 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
         del gdf_bridge_area_min['area']
         # ---------------
         
-        # revised - 2023.09.21 - gdf_bridge_area_min contain items other than Polygons
-        # need to remove these non Polygons
-        if not gdf_bridge_area_min.geometry.type.equals("Polygon"):
-            print('Filtering out non-polygon items in hull ...')
-            # Filter out non-Polygon geometries
-            gdf_bridge_area_min = gdf_bridge_area_min[gdf_bridge_area_min.geometry.type == "Polygon"]
-            
-            # revise the polygon index
-            gdf_bridge_area_min = gdf_bridge_area_min.reindex()
-        # ---------------
-        
         # stringify list
         # TODO - 2022.07.21 - what if the list_clouds_per_poly is too long to fit into a field?
         gdf_bridge_area_min['las_paths'] = gdf_bridge_area_min['las_paths'].astype(str)

@@ -333,6 +333,20 @@ def fn_fix_convex_hulls(str_convex_hull_filepath,str_input_json,dict_global_conf
         gdf_bridge_poly_revised.to_file(str_convex_hull_filepath)
     # ---- 
     
+    # revised - 2023.09.21 - gdf_bridge_poly_revised contain items other than Polygons
+    # need to remove these non Polygons
+    if not gdf_bridge_poly_revised.geometry.type.equals("Polygon"):
+        print('Filtering out non-polygon items in hull ...')
+        # Filter out non-Polygon geometries
+        gdf_bridge_poly_revised = gdf_bridge_poly_revised[gdf_bridge_poly_revised.geometry.type == "Polygon"]
+        
+        # revise the polygon index
+        gdf_bridge_poly_revised = gdf_bridge_poly_revised.reindex()
+        
+        # overwrite the input convex hulls with revised hulls
+        gdf_bridge_poly_revised.to_file(str_convex_hull_filepath)
+    # ---------------
+    
     
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == '__main__':
