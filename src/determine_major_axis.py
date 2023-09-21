@@ -142,7 +142,7 @@ def fn_get_major_axis_for_polygon(shp_bridge_ar_fn, flt_bridge_buffer_fn, gdf_tr
                 # and these lines are in opposite directions - Need to fix
                 # 2022.12.05 - MAC
                 shp_major_axis = gdf_possible_major_axis_cross_twice_ln.iloc[0]['geometry']
-                print('Error Found')
+                print(' - Duplicate Road Found')
 
             return(shp_major_axis)
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -193,7 +193,7 @@ def fn_determine_major_axis(str_bridge_polygons_path,str_trans_line_path,str_out
         gdf_bridge_ar = gdf_bridge_ar[gdf_bridge_ar.geometry.type == "Polygon"]
         
         # Reset the index
-        gdf_bridge_ar = gdf_bridge_ar.reset_index(drop=True)
+        #gdf_bridge_ar = gdf_bridge_ar.reset_index(drop=True)
         
         #save the revised hull gpkg
         gdf_bridge_ar.to_file(str_bridge_polygons_path, driver="GPKG")
