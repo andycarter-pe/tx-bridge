@@ -4,7 +4,7 @@
 #
 # Created by: Andy Carter, PE
 # Created - 2022.04.27
-# Last revised - 2023.08.29 - for docker container
+# Last revised - 2023.09.21 - for non-polygon objects in gpkg
 #
 # tx-bridge - second processing script
 # Uses the 'pdal' conda environment
@@ -302,6 +302,17 @@ def fn_polygonize_point_groups(str_las_input_directory, str_output_dir, int_clas
         
         # delete the 'temp_id' coloumn
         del gdf_bridge_area_min['area']
+        # ---------------
+        
+        # revised - 2023.09.21 - gdf_bridge_area_min contain items other than Polygons
+        # need to remove these non Polygons
+        if not gdf_bridge_area_min.geometry.type.equals("Polygon"):
+            print('Filtering out non-polygon items in hull ...')
+            # Filter out non-Polygon geometries
+            gdf_bridge_area_min = gdf_bridge_area_min[gdf_bridge_area_min.geometry.type == "Polygon"]
+            
+            # revise the polygon index
+            gdf_bridge_area_min = gdf_bridge_area_min.reindex()
         # ---------------
         
         # stringify list

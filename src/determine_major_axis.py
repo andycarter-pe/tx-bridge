@@ -185,19 +185,6 @@ def fn_determine_major_axis(str_bridge_polygons_path,str_trans_line_path,str_out
     # read the bridge polygons
     gdf_bridge_ar = gpd.read_file(str_bridge_polygons_path)
     
-    # revised - 2023.09.21 - gdf_bridge_ar may contain items other than Polygons
-    # need to remove these non Polygons
-    if not gdf_bridge_ar.geometry.type.equals("Polygon"):
-        print('Filtering out non-polygon items in hull ...')
-        # Filter out non-Polygon geometries
-        gdf_bridge_ar = gdf_bridge_ar[gdf_bridge_ar.geometry.type == "Polygon"]
-        
-        # Reset the index
-        #gdf_bridge_ar = gdf_bridge_ar.reset_index(drop=True)
-        
-        #save the revised hull gpkg
-        gdf_bridge_ar.to_file(str_bridge_polygons_path, driver="GPKG")
-    
     print('Reading transportation lines ...')
     # read the transporation linework
     gdf_trans = gpd.read_file(str_trans_line_path)
